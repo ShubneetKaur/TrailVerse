@@ -1,3 +1,4 @@
+
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
@@ -5,54 +6,58 @@ from typing import Any, Optional, Union
 import jwt
 from pwdlib import PasswordHash
 
-# Initialize modern Argon2 password hashing context
 password_hash_context = PasswordHash.recommended()
 
-# JWT configuration settings
-SECRET_KEY = os.getenv("SECRET_KEY", "virsa-insecure-secret-key-for-dev-only-change-me-1234567890")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY is missing. Set it in the backend .env file."
+    )
+
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+)
 
 
 def hash_password(password: str) -> str:
-    """Generate a secure Argon2 hash from the given plain password."""
     return password_hash_context.hash(password)
 
 
-# Backward-compatibility alias
-get_password_hash = hash_password
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against the stored Argon2 hash."""
-    return password_hash_context.verify(plain_password, hashed_password)
+def verify_password(
+    plain_password: str,
+    hashed_password: str,
+) -> bool:
+    return password_hash_context.verify(
+        plain_password,
+        hashed_password,
+    )
 
 
 def create_access_token(
     subject: Union[str, Any],
     expires_delta: Optional[timedelta] = None,
 ) -> str:
-    """Create a signed JWT access token using PyJWT."""
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if expires_delta is None:
+        expires_delta = timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        )
 
-    to_encode = {
-        "exp": expire,
+    now = datetime.now(timezone.utc)
+    payload = {
         "sub": str(subject),
-        "iat": datetime.now(timezone.utc),
+        "exp": now + expires_delta,
+        "iat": now,
     }
-    encoded_jwt = jwt.encode(
-        to_encode,
+
+    return jwt.encode(
+        payload,
         SECRET_KEY,
         algorithm=ALGORITHM,
     )
-    return encoded_jwt
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
-    """Decode and validate a JWT access token."""
     return jwt.decode(
         token,
         SECRET_KEY,
