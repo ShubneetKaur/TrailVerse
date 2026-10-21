@@ -1,122 +1,204 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+
+import { useState } from "react";
+import "./App.css";
+import brideImage from "./assets/bride.png";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const switchMode = () => {
+    setIsLogin((previous) => !previous);
+
+    setFormData({
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      alert("Your passwords do not match.");
+      return;
+    }
+
+    // Connect this form to your backend authentication API later.
+    alert(
+      isLogin
+        ? "Login submitted. Backend integration is still needed."
+        : "Registration submitted. Backend integration is still needed."
+    );
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <main className="auth-page">
+      {/* LEFT PAINTING */}
+      <div className="painting painting-left" aria-hidden="true">
+        <img src={brideImage} alt="" />
+      </div>
+
+      {/* RIGHT MIRRORED PAINTING */}
+      <div className="painting painting-right" aria-hidden="true">
+        <img src={brideImage} alt="" />
+      </div>
+
+      {/* CENTRE LOGIN / REGISTER CARD */}
+      <section className="auth-card">
+        <a className="brand-name" href="/">
+          VIRSA
+        </a>
+
+        <p className="brand-tagline">
+          WHERE HERITAGE FINDS A HOME
+        </p>
+
+        <div className="heading-block">
+          <p className="eyebrow">
+            {isLogin ? "YOUR JOURNEY CONTINUES" : "BECOME PART OF OUR STORY"}
+          </p>
+
+          <h1>
+            {isLogin ? (
+              <>
+                Welcome <em>back</em>
+              </>
+            ) : (
+              <>
+                Join the <em>legacy</em>
+              </>
+            )}
+          </h1>
+
+          <p className="form-description">
+            {isLogin
+              ? "Discover stories woven into every creation"
+              : "Create an account and celebrate Indian craftsmanship"}
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {!isLogin && (
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="Enter your username"
+                value={formData.username}
+                onChange={handleChange}
+                autoComplete="username"
+                required
+              />
+            </div>
+          )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <div className="form-group">
+            <label htmlFor="email">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              required
+            />
+          </div>
+
+          {!isLogin && (
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm password</label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="Re-enter your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                autoComplete="new-password"
+                required
+              />
+            </div>
+          )}
+
+          {isLogin && (
+            <div className="form-options">
+              <label className="remember-option">
+                <input type="checkbox" name="remember" />
+                <span>Remember me</span>
+              </label>
+
+              <button
+                type="button"
+                className="text-button"
+                onClick={() =>
+                  alert("Password recovery will be added with backend integration.")
+                }
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+
+          <button type="submit" className="submit-button">
+            {isLogin ? "Sign In" : "Create Account"}
+            <span aria-hidden="true">↗</span>
+          </button>
+        </form>
+
+        <p className="switch-mode">
+          {isLogin ? "New to Virsa?" : "Already have an account?"}{" "}
+          <button
+            type="button"
+            className="text-button switch-button"
+            onClick={switchMode}
+          >
+            {isLogin ? "Create an account" : "Sign in"}
+          </button>
+        </p>
+
+        <div className="bottom-ornament" aria-hidden="true">
+          <span />
+          <span className="ornament-diamond">◆</span>
+          <span />
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </main>
+  );
 }
 
-export default App
+export default App;
