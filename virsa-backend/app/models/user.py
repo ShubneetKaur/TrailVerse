@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
+from app.core.security import hash_password, verify_password  # noqa: F401
 
 
 class User(Base):
@@ -13,6 +14,10 @@ class User(Base):
         String(255),
         unique=True,
         index=True,
+        nullable=False,
+    )
+    hashed_password: Mapped[str] = mapped_column(
+        String(255),
         nullable=False,
     )
     role: Mapped[str] = mapped_column(
