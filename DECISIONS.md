@@ -1,0 +1,338 @@
+# Architecture Decision Records (ADR) & Major Coding Decisions
+
+> **Project:** TrailVerse / Virsa  
+> **Status:** Active & Maintained  
+> **Rule for Contributors & AI Agents:** Whenever introducing an architectural pattern, choosing a major library, changing database structure, or modifying authentication/authorization semantics, you **must** log the decision in this document following the template below.
+
+---
+
+## 📑 Table of Contents
+
+- [Maintenance Policy & Decision Template](#maintenance-policy--decision-template)
+- [Summary of Decisions](#summary-of-decisions)
+- [ADR-001: Workspace & Monorepo Structure](#adr-001-workspace--monorepo-structure)
+- [ADR-002: Backend Framework Selection (FastAPI + Uvicorn)](#adr-002-backend-framework-selection-fastapi--uvicorn)
+- [ADR-003: API Routing Hierarchy and Versioning Strategy](#adr-003-api-routing-hierarchy-and-versioning-strategy)
+- [ADR-004: Data Validation, Serialization, and DTOs (Pydantic v2)](#adr-004-data-validation-serialization-and-dtos-pydantic-v2)
+- [ADR-005: Database ORM and Connection Strategy (SQLAlchemy 2.0)](#adr-005-database-orm-and-connection-strategy-sqlalchemy-20)
+- [ADR-006: Database Schema Migrations (Alembic)](#adr-006-database-schema-migrations-alembic)
+- [ADR-007: Authentication & Token Architecture (JWT with Dual Login Endpoints)](#adr-007-authentication--token-architecture-jwt-with-dual-login-endpoints)
+- [ADR-008: Password Security & Cryptography (Bcrypt via Passlib)](#adr-008-password-security--cryptography-bcrypt-via-passlib)
+- [ADR-009: Layered Dependency Injection & Role-Based Access Control (RBAC)](#adr-009-layered-dependency-injection--role-based-access-control-rbac)
+- [ADR-010: E-Commerce Relational Domain Modeling & Integrity Constraints](#adr-010-e-commerce-relational-domain-modeling--integrity-constraints)
+- [ADR-011: Inventory Reservation & Checkout Concurrency Control](#adr-011-inventory-reservation--checkout-concurrency-control)
+- [ADR-012: Configuration Management & 12-Factor Environment Settings](#adr-012-configuration-management--12-factor-environment-settings)
+
+---
+
+## Maintenance Policy & Decision Template
+
+### Policy
+1. **Immutable History:** Once a decision is accepted and implemented, do not delete it. If the decision changes in the future, mark its status as `Superseded by ADR-XXX` and create a new record.
+2. **Mandatory Documentation:** Every major new service, library, data layer modification, security change, or integration must be recorded here before or immediately after implementation.
+
+### Decision Template
+```markdown
+### ADR-XXX: [Short Descriptive Title]
+
+- **Date:** YYYY-MM-DD
+- **Status:** [Proposed | Accepted | Implemented | Deprecated | Superseded by ADR-YYY]
+- **Components:** [e.g., Backend, Auth, Database, API, Frontend]
+
+#### Context
+What problem was being addressed? What constraints or considerations were present?
+
+#### Decision
+What choice was made? What technologies, patterns, or architecture were adopted?
+
+#### Consequences & Rationale
+- **Benefits:** Why this is good.
+- **Trade-offs / Risks:** What we sacrifice or must monitor.
+- **Alternatives Considered:** What options were rejected and why.
+```
+
+---
+
+## Summary of Decisions
+
+| ID | Title | Status | Primary Component |
+| :--- | :--- | :--- | :--- |
+| **ADR-001** | Workspace & Monorepo Structure | `Implemented` | Project Architecture |
+| **ADR-002** | Backend Framework Selection (FastAPI + Uvicorn) | `Implemented` | Backend Framework |
+| **ADR-003** | API Routing Hierarchy & Versioning (`/api/v1`) | `Implemented` | API Design |
+| **ADR-004** | Data Validation, Serialization, and DTOs (Pydantic v2) | `Implemented` | Data Validation |
+| **ADR-005** | Database ORM & Session Lifecycle (SQLAlchemy 2.0) | `Implemented` | Persistence Layer |
+| **ADR-006** | Database Schema Migrations (Alembic) | `Implemented` | Database Tooling |
+| **ADR-007** | JWT Authentication with Dual Login Endpoints | `Implemented` | Authentication & Security |
+| **ADR-008** | Password Hashing (Bcrypt via Passlib) | `Implemented` | Security / Crypto |
+| **ADR-009** | Layered Dependency Injection & RBAC | `Implemented` | Authorization & Architecture |
+| **ADR-010** | Relational Domain Modeling & Referential Integrity | `Implemented` | Data Modeling |
+| **ADR-011** | Inventory Reservation & Checkout Concurrency (`with_for_update`) | `Implemented` | Business Logic / Transactions |
+| **ADR-012** | 12-Factor Environment Settings (`pydantic-settings`) | `Implemented` | Configuration & DevOps |
+
+---
+
+## ADR-001: Workspace & Monorepo Structure
+
+- **Status:** `Implemented`
+- **Components:** Project Architecture
+
+### Context
+TrailVerse is an evolving platform featuring a backend core (`virsa-backend`) that serves e-commerce, cultural heritage, or marketplace capabilities, with anticipated additions for web/mobile frontends. We needed a clean directory structure that keeps the codebase unified without creating tight coupling between the backend and future client apps.
+
+### Decision
+Adopt a modular monorepo directory layout at workspace root:
+- `virsa-backend/`: Self-contained Python application containing its own virtual environment configurations, dependency manifests (`requirements.txt`), migrations (`alembic/`), and application logic (`app/`).
+- Root level contains shared repository governance (`README.md`, `DECISIONS.md`, `.gitignore`, and agent customization rules).
+- Client applications (e.g. web frontend, admin dashboard) will reside in sibling directories alongside `virsa-backend/`.
+
+### Consequences & Rationale
+- **Benefits:** Simplifies version control, coordinates documentation, and enables cross-project workflows while keeping backend deployment isolated.
+- **Trade-offs:** Requires running backend commands from `virsa-backend` or referencing subpaths.
+
+---
+
+## ADR-002: Backend Framework Selection (FastAPI + Uvicorn)
+
+- **Status:** `Implemented`
+- **Components:** Backend Framework
+
+### Context
+The backend requires high-throughput asynchronous execution, native OpenAPI/Swagger documentation, strict type validation, and rapid API endpoint development.
+
+### Decision
+Selected **FastAPI** (`fastapi>=0.110.0`) running on the **Uvicorn** ASGI server (`uvicorn[standard]>=0.28.0`).
+
+### Consequences & Rationale
+- **Benefits:**
+  - Standardized OpenAPI 3.0 schemas automatically exposed at `/api/v1/docs` (Swagger UI) and `/api/v1/redoc` (ReDoc).
+  - Modern Python type hints throughout request handlers and database transactions.
+  - Native asynchronous support and dependency injection system.
+- **Trade-offs:** Requires standard ASGI deployment setup rather than traditional WSGI (like Gunicorn + WSGI).
+
+---
+
+## ADR-003: API Routing Hierarchy and Versioning Strategy
+
+- **Status:** `Implemented`
+- **Components:** API Design & Routing
+
+### Context
+Client applications require stable endpoints that can evolve without breaking backwards compatibility. The API also needs health monitoring for container orchestrators and load balancers.
+
+### Decision
+1. **Global Version Prefix:** All API endpoints are namespaced under `/api/v1` (`settings.API_V1_STR`), aggregated through a central `api_router` in `app/api/routes/__init__.py`.
+2. **Modular Sub-Routers:** Dedicated route files by domain:
+   - `/auth`: Registration, OAuth2 login, JSON login, current profile (`/me`).
+   - `/users`: User administration and profile updates.
+   - `/products`: Product listing, filtering, search, and category management.
+   - `/cart`: Dynamic cart availability check and price calculation.
+   - `/orders`: Order placement, user order history, and detailed order retrieval.
+3. **Health Check Endpoints:**
+   - `GET /`: Root informational status including project name, status string, and interactive docs URL.
+   - `GET /health`: Lightweight heartbeat endpoint (`{"status": "healthy"}`) for probes and load balancers.
+
+### Consequences & Rationale
+- **Benefits:** Clear route ownership, predictable URL taxonomy, zero conflicts across domains, and readiness for future `/api/v2` versioning if breaking changes are introduced.
+
+---
+
+## ADR-004: Data Validation, Serialization, and DTOs (Pydantic v2)
+
+- **Status:** `Implemented`
+- **Components:** Data Validation & DTO Layer
+
+### Context
+APIs must strictly validate incoming request payloads to prevent malformed data or security vulnerabilities (e.g., mass-assignment or injection), while preventing leakage of sensitive internal columns (e.g., `hashed_password`).
+
+### Decision
+Utilize **Pydantic v2** (`pydantic>=2.6.0`) with a layered Data Transfer Object (DTO) schema pattern in `app/schemas/`:
+1. **Base Schema (`*Base`):** Defines shared fields and field constraints (e.g., `UserBase`, `ProductBase`, `CategoryBase`).
+2. **Create Schema (`*Create`):** Adds fields required only at creation time (e.g., plain-text `password` in `UserCreate`).
+3. **Update Schema (`*Update`):** All fields optional to support partial updates (`PATCH`/`PUT`).
+4. **Response Schema (`*Response`):** Explicitly specifies which fields are serialized to clients. Configured with `model_config = ConfigDict(from_attributes=True)` to map directly from SQLAlchemy ORM entities. Sensitive fields like `hashed_password` are strictly omitted.
+
+### Consequences & Rationale
+- **Benefits:** Compile-time and runtime type safety, automatic 422 Unprocessable Entity responses for invalid inputs, and protection against accidental disclosure of credentials.
+
+---
+
+## ADR-005: Database ORM and Connection Strategy (SQLAlchemy 2.0)
+
+- **Status:** `Implemented`
+- **Components:** Persistence Layer
+
+### Context
+We need a robust ORM that allows local rapid prototyping (zero-configuration SQLite) while providing seamless portability to production-grade relational databases like PostgreSQL.
+
+### Decision
+1. **SQLAlchemy 2.0:** Standardized on `sqlalchemy>=2.0.28` using `declarative_base()` (`app.db.base.Base`).
+2. **Session Lifecycle via Dependency Injection:** A FastAPI generator dependency `get_db()` in `app/dependencies.py` instantiates `SessionLocal()`, yields the active session to the route handler, and reliably calls `db.close()` in a `finally` block.
+3. **Connection Pooling & Multi-Dialect Setup:**
+   - `pool_pre_ping=True` ensures stale or dropped connections are reconnected before query execution.
+   - Conditional `{"check_same_thread": False}` enabled automatically when running against SQLite.
+   - Production can switch directly to PostgreSQL simply by configuring `DATABASE_URL=postgresql://user:pass@host/db` without altering Python code.
+
+### Consequences & Rationale
+- **Benefits:** Prevents connection leaks, provides complete database decoupling, and isolates transaction boundaries cleanly per HTTP request.
+
+---
+
+## ADR-006: Database Schema Migrations (Alembic)
+
+- **Status:** `Implemented`
+- **Components:** Database Tooling
+
+### Context
+Manual schema updates lead to drift across environments and loss of historical structural tracking. We need repeatable, code-controlled migrations.
+
+### Decision
+Adopt **Alembic** (`alembic>=1.13.1`):
+1. Configuration in `virsa-backend/alembic.ini` and environment script `virsa-backend/alembic/env.py`.
+2. Dynamic connection URL resolution: `alembic/env.py` reads `settings.DATABASE_URL` directly from application settings.
+3. Centralized Model Aggregation: `app/db/base.py` imports all ORM models (`User`, `Category`, `Product`, `Order`, `OrderItem`, `Review`) and binds their metadata to `target_metadata = Base.metadata`. This guarantees `alembic revision --autogenerate` detects every table and relation.
+
+### Consequences & Rationale
+- **Benefits:** Zero manual SQL file tracking needed; all schema changes are versioned alongside source code and can be verified across staging and production.
+
+---
+
+## ADR-007: Authentication & Token Architecture (JWT with Dual Login Endpoints)
+
+- **Status:** `Implemented`
+- **Components:** Authentication & Security
+
+### Context
+Client applications (React/Next.js/mobile) typically interact via standard JSON REST bodies (`{"email": "...", "password": "..."}`). However, OpenAPI/Swagger UI relies on the OAuth2 specification (`OAuth2PasswordRequestForm` with `application/x-www-form-urlencoded` fields `username` and `password`) to drive the interactive "Authorize" lock button.
+
+### Decision
+Implement stateless **JWT (JSON Web Tokens)** using `python-jose` with dual authentication endpoints in `app/api/routes/auth.py`:
+1. `POST /api/v1/auth/login`: Accepts `OAuth2PasswordRequestForm` to provide full compatibility with Swagger UI.
+2. `POST /api/v1/auth/login/json`: Accepts `LoginRequest` (JSON body) for seamless SPA, mobile, and third-party API clients.
+3. Tokens are signed using HMAC-SHA256 (`HS256`) containing the subject `sub` (user's email) and expiration timestamp `exp`.
+4. Lifetime configured via `ACCESS_TOKEN_EXPIRE_MINUTES` (default 60 minutes).
+
+### Consequences & Rationale
+- **Benefits:** Best of both worlds: full Swagger UI interactivity during development/testing, and native JSON payloads for frontend clients without requiring form-data encoders.
+
+---
+
+## ADR-008: Password Security & Cryptography (Bcrypt via Passlib)
+
+- **Status:** `Implemented`
+- **Components:** Security / Cryptography
+
+### Context
+Passwords must never be stored in plaintext. They require slow, salted, computationally intensive hashing algorithms resistant to GPU acceleration and precomputed rainbow table attacks.
+
+### Decision
+Standardize on **Bcrypt** via `passlib[bcrypt]` and `bcrypt>=4.0.1`:
+- Encapsulated in `app/core/security.py` via `CryptContext(schemes=["bcrypt"], deprecated="auto")`.
+- `verify_password(plain_password, hashed_password) -> bool`
+- `get_password_hash(password) -> str`
+- Hashes are verified and generated exclusively in the service layer (`app/services/auth_service.py`).
+
+### Consequences & Rationale
+- **Benefits:** Industry-standard password hashing with automatic salt generation and work-factor calibration.
+
+---
+
+## ADR-009: Layered Dependency Injection & Role-Based Access Control (RBAC)
+
+- **Status:** `Implemented`
+- **Components:** Authorization & Middleware
+
+### Context
+Different endpoints require varying security guarantees: public access, authenticated user access, active user status, or administrator (superuser) access. Duplicating authorization logic in route bodies creates bugs and security regressions.
+
+### Decision
+Implement a layered dependency chain in `app/dependencies.py`:
+```
+                  ┌──────────────────────┐
+                  │       get_db         │
+                  └──────────┬───────────┘
+                             │
+                  ┌──────────▼───────────┐
+                  │   get_current_user   │  (validates JWT bearer token)
+                  └──────────┬───────────┘
+                             │
+               ┌─────────────▼──────────────┐
+               │  get_current_active_user   │  (ensures user.is_active == True)
+               └─────────────┬──────────────┘
+                             │
+             ┌───────────────▼───────────────┐
+             │ get_current_active_superuser  │  (ensures user.is_superuser == True)
+             └───────────────────────────────┘
+```
+- Non-authenticated requests receive `401 Unauthorized` with `WWW-Authenticate: Bearer`.
+- Inactive accounts receive `400 Bad Request`.
+- Regular users attempting admin actions (e.g. creating products or reading user directories) receive `403 Forbidden`.
+
+### Consequences & Rationale
+- **Benefits:** Extremely clean route signatures (e.g., `current_user: User = Depends(get_current_active_superuser)`), zero code repetition, and deterministic enforcement of least-privilege principles.
+
+---
+
+## ADR-010: E-Commerce Relational Domain Modeling & Integrity Constraints
+
+- **Status:** `Implemented`
+- **Components:** Domain Models / Database
+
+### Context
+The e-commerce data model consists of `User`, `Category`, `Product`, `Order`, `OrderItem`, and `Review`. Relationships require careful foreign key cascade actions to prevent dangling records and protect historical financial transactions.
+
+### Decision
+1. **Foreign Key Deletion Rules:**
+   - `Order.user_id`: `CASCADE` with User.
+   - `OrderItem.order_id`: `CASCADE` with Order.
+   - `OrderItem.product_id`: `RESTRICT`. Deleting a product must not erase or corrupt historical order records or receipts.
+   - `Product.category_id`: `SET NULL`. Deleting a category keeps associated products active without a assigned category.
+   - `Review.user_id` & `Review.product_id`: `CASCADE`.
+2. **Historical Pricing Preservation:** `OrderItem` captures a standalone `price: Float` column at the moment of order placement, decoupling historical records from subsequent product price changes.
+3. **Database-Level Data Integrity Constraints:**
+   - Unique constraints on `User.email`, `Category.name`, and `Category.slug`.
+   - `CheckConstraint("rating >= 1 AND rating <= 5", name="check_rating_range")` enforced directly in the database for `Review`.
+
+### Consequences & Rationale
+- **Benefits:** Eliminates orphaned items, preserves financial audit history, and enforces valid ratings at both database and schema layers.
+
+---
+
+## ADR-011: Inventory Reservation & Checkout Concurrency Control
+
+- **Status:** `Implemented`
+- **Components:** Orders & Inventory / Concurrency
+
+### Context
+In concurrent e-commerce systems, multiple customers may simultaneously order the last remaining units of stock. Without synchronization, race conditions allow overselling below zero.
+
+### Decision
+1. **Pessimistic Locking on Checkout:** In `POST /api/v1/orders` (`app/api/routes/orders.py`), product stock verification uses `db.query(Product)...with_for_update()`.
+2. **Atomic Inventory Decrement:** In the same database transaction, available stock is decremented (`product.stock -= item.quantity`), line items are generated, the order is created, and the transaction is committed atomically. If any item is out of stock, the transaction aborts with `400 Bad Request`.
+3. **Read-Only Cart Estimation:** `POST /api/v1/cart/calculate` performs live product and stock validation without acquiring row locks, ensuring high read throughput prior to the actual checkout step.
+
+### Consequences & Rationale
+- **Benefits:** Prevents race conditions and inventory deficits during sales spikes while keeping browsing and cart viewing performant.
+
+---
+
+## ADR-012: Configuration Management & 12-Factor Environment Settings
+
+- **Status:** `Implemented`
+- **Components:** Configuration & Environment
+
+### Context
+Configuration values (JWT secrets, token expiry, database connection strings, CORS origins) vary across local development, testing, staging, and production. Hardcoding configurations or secrets in repository code violates Twelve-Factor App principles and introduces security risks.
+
+### Decision
+Adopt **`pydantic-settings`** with `BaseSettings` in `app/core/config.py`:
+- Configuration attributes define sane development defaults with environment variable overrides loaded from `.env`.
+- CORS configuration accepts a typed `list[str]` of allowed client origins.
+- Sensitive values like `SECRET_KEY` are isolated, with `.env` ignored by git and template values documented in `.env.example`.
+
+### Consequences & Rationale
+- **Benefits:** Zero-code deployments across environments, strict validation of configuration types at boot, and complete isolation of credentials.
+
+---
+
+*This document must be updated whenever any major architectural decision or new technical component is introduced to TrailVerse.*
