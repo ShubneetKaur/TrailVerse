@@ -22,6 +22,7 @@
 - [ADR-010: E-Commerce Relational Domain Modeling & Integrity Constraints](#adr-010-e-commerce-relational-domain-modeling--integrity-constraints)
 - [ADR-011: Inventory Reservation & Checkout Concurrency Control](#adr-011-inventory-reservation--checkout-concurrency-control)
 - [ADR-012: Configuration Management & 12-Factor Environment Settings](#adr-012-configuration-management--12-factor-environment-settings)
+- [ADR-013: Streamlined Minimal Backend Architecture](#adr-013-streamlined-minimal-backend-architecture)
 
 ---
 
@@ -69,6 +70,7 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-010** | Relational Domain Modeling & Referential Integrity | `Implemented` | Data Modeling |
 | **ADR-011** | Inventory Reservation & Checkout Concurrency (`with_for_update`) | `Implemented` | Business Logic / Transactions |
 | **ADR-012** | 12-Factor Environment Settings (`pydantic-settings`) | `Implemented` | Configuration & DevOps |
+| **ADR-013** | Streamlined Minimal Backend Architecture | `Implemented` | Project Architecture |
 
 ---
 
@@ -332,6 +334,39 @@ Adopt **`pydantic-settings`** with `BaseSettings` in `app/core/config.py`:
 
 ### Consequences & Rationale
 - **Benefits:** Zero-code deployments across environments, strict validation of configuration types at boot, and complete isolation of credentials.
+
+---
+
+## ADR-013: Streamlined Minimal Backend Architecture
+
+- **Date:** 2026-10-21
+- **Status:** `Implemented` (Supersedes ADR-003, ADR-006, ADR-007, ADR-008, ADR-009, ADR-010, ADR-011 for minimal baseline)
+- **Components:** Backend Core, Database, Project Architecture
+
+### Context
+To facilitate rapid incremental prototyping and minimize operational complexity at the early development stage, the backend structure needed to be streamlined down to its essential core: direct database connectivity and a centralized application entrypoint.
+
+### Decision
+Consolidate `virsa-backend/` to a lightweight, minimalist baseline layout:
+```
+virsa-backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   └── db/
+│       ├── __init__.py
+│       └── session.py
+├── .env
+└── .gitignore
+```
+1. **Application Entrypoint (`app/main.py`):** Instantiates FastAPI, loads environment settings via `dotenv`, sets up root info and `/health` probes with live database ping verification.
+2. **Database Engine & Session (`app/db/session.py`):** Configures SQLAlchemy declarative base, thread-safe connection pool, `SessionLocal`, and FastAPI dependency `get_db`.
+3. **Environment Configuration (`.env`):** Defines minimal variables (`PROJECT_NAME`, `DATABASE_URL`).
+4. **Git Ignore (`.gitignore`):** Ignores virtual environments, secrets, databases, and Python caches.
+
+### Consequences & Rationale
+- **Benefits:** Low barrier to entry, minimal boilerplate, and immediate readiness for targeted feature additions.
+- **Trade-offs:** Advanced features like migrations (Alembic), JWT authentication routes, and multi-resource schemas will be reintroduced incrementally as each domain area is developed.
 
 ---
 

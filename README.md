@@ -13,14 +13,11 @@ Every contributor and AI agent must review and keep `DECISIONS.md` updated as ne
 
 ## 🏗️ Repository Layout
 
-- **[`virsa-backend/`](file:///c:/Users/Shubneet%20Kaur/Documents/trailverse/virsa-backend/)**: FastAPI backend service powering the API.
-  - `app/api/`: Versioned API endpoints (`/auth`, `/users`, `/products`, `/cart`, `/orders`).
-  - `app/core/`: Configuration, security, and JWT token management.
-  - `app/db/`: Database session setup, connection pooling, and Base declarative model.
-  - `app/models/`: SQLAlchemy ORM database models.
-  - `app/schemas/`: Pydantic v2 validation DTOs.
-  - `app/services/`: Service layer containing business and authentication logic.
-  - `alembic/`: Database migrations.
+- **[`virsa-backend/`](file:///c:/Users/Shubneet%20Kaur/Documents/trailverse/virsa-backend/)**: FastAPI backend service.
+  - `app/main.py`: FastAPI app entrypoint with health and root endpoints.
+  - `app/db/session.py`: Database engine, SessionLocal, and dependency setup.
+  - `.env`: Local environment configurations.
+  - `.gitignore`: Version control exclusions.
 - **[`DECISIONS.md`](file:///c:/Users/Shubneet%20Kaur/Documents/trailverse/DECISIONS.md)**: Master decision log (ADR-001 through ADR-012+).
 - **[`AGENTS.md`](file:///c:/Users/Shubneet%20Kaur/Documents/trailverse/AGENTS.md)**: AI agent and developer guidelines ensuring decisions remain documented.
 

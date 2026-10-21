@@ -1,14 +1,5 @@
-from app.models.category import Category
-from app.models.order import Order, OrderItem
-from app.models.product import Product
-from app.models.review import Review
+"""VIRSA Database Models."""
+
 from app.models.user import User
 
-__all__ = [
-    "User",
-    "Category",
-    "Product",
-    "Order",
-    "OrderItem",
-    "Review",
-]
+__all__ = ["User"]
