@@ -2,7 +2,7 @@ from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
-from app.core.security import hash_password, verify_password  # noqa: F401
+
 
 
 class User(Base):
