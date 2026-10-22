@@ -5,7 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401
-from app.db.session import Base, engine, get_db
+from app.api.routes import auth as auth_router
+from app.db.session import Base, engine
+from app.dependencies import get_db
 
 load_dotenv()
 
@@ -16,6 +18,9 @@ app = FastAPI(
     title=os.getenv("PROJECT_NAME", "Virsa Backend API"),
     version="0.1.0",
 )
+
+# Register routers
+app.include_router(auth_router.router, prefix="/api/v1")
 
 
 @app.get("/")
