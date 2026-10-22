@@ -23,6 +23,7 @@
 - [ADR-011: Inventory Reservation & Checkout Concurrency Control](#adr-011-inventory-reservation--checkout-concurrency-control)
 - [ADR-012: Configuration Management & 12-Factor Environment Settings](#adr-012-configuration-management--12-factor-environment-settings)
 - [ADR-013: Streamlined Minimal Backend Architecture](#adr-013-streamlined-minimal-backend-architecture)
+- [ADR-014: Modern Authentication Cryptography (pwdlib[argon2] & PyJWT)](#adr-014-modern-authentication-cryptography-pwdlibargon2--pyjwt)
 
 ---
 
@@ -71,6 +72,7 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-011** | Inventory Reservation & Checkout Concurrency (`with_for_update`) | `Implemented` | Business Logic / Transactions |
 | **ADR-012** | 12-Factor Environment Settings (`pydantic-settings`) | `Implemented` | Configuration & DevOps |
 | **ADR-013** | Streamlined Minimal Backend Architecture | `Implemented` | Project Architecture |
+| **ADR-014** | Modern Authentication Cryptography (`pwdlib[argon2]` & `PyJWT`) | `Implemented` | Security / Crypto & Auth |
 
 ---
 
@@ -370,4 +372,26 @@ virsa-backend/
 
 ---
 
+## ADR-014: Modern Authentication Cryptography (pwdlib[argon2] & PyJWT)
+
+- **Date:** 2026-10-21
+- **Status:** `Implemented` (Supersedes ADR-007 and ADR-008 crypto tooling)
+- **Components:** Security / Crypto & Authentication
+
+### Context
+`passlib` has ceased active maintenance and triggers deprecation warnings on modern Python/cryptography releases. Similarly, `python-jose` lacks active maintenance for newer cryptographic primitives. Modern FastAPI production best practices recommend switching to `pwdlib` with Argon2id support for password hashing and `PyJWT` for robust token signing and validation.
+
+### Decision
+Adopt modern, actively maintained cryptographic tooling:
+1. **Password Hashing:** `pwdlib[argon2]>=0.2.0` utilizing Argon2id as the default password hasher (the winner of the Password Hashing Competition, memory-hard and GPU-resistant).
+2. **Token Signing & Verification:** `pyjwt[crypto]>=2.8.0` for HMAC-SHA256 and asymmetric JWT operations.
+3. **Email Validation:** `email-validator>=2.1.0` for strict RFC 5322 email syntax and DNS checks in Pydantic schemas.
+
+### Consequences & Rationale
+- **Benefits:** Eliminates legacy deprecation warnings, provides superior protection against hardware brute-force attacks via Argon2id, and aligns with standard modern FastAPI security architecture.
+- **Trade-offs:** Slightly higher CPU/memory consumption per hash verification during login, which is tunable via Argon2 time and memory cost parameters.
+
+---
+
 *This document must be updated whenever any major architectural decision or new technical component is introduced to TrailVerse.*
+
