@@ -33,10 +33,25 @@ Every contributor and AI agent must review and keep `DECISIONS.md` updated as ne
    ```bash
    pip install -r requirements.txt
    ```
-3. Run the development server:
+3. Create the local environment file:
+   ```bash
+   copy .env.example .env
+   ```
+   Keep `SECRET_KEY` private and replace the example value before using the backend outside local development.
+4. Run the development server:
    ```bash
    uvicorn app.main:app --reload
    ```
-4. Access the interactive API documentation:
+5. Access the interactive API documentation:
    - Swagger UI: `http://localhost:8000/api/v1/docs`
    - ReDoc: `http://localhost:8000/api/v1/redoc`
+
+### Seller verification endpoints
+
+- `POST /seller-applications`: Submit a seller application as a customer.
+- `GET /seller-applications/mine`: View your own application history.
+- `GET /seller-applications`: List applications as an admin.
+- `GET /seller-applications/{application_id}`: View one application as an admin.
+- `PATCH /seller-applications/{application_id}/review`: Approve, reject, or request more information as an admin.
+
+Approval records verification status only; it does not change the user's role.
