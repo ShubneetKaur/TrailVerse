@@ -1,0 +1,239 @@
+from typing import Annotated
+
+import cloudinary.uploader
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy.orm import Session
+
+from app.dependencies import get_db, require_approved_seller
+from app.models.artwork import Artwork
+from app.models.user import User
+from app.schemas.artwork import ArtworkCreate, ArtworkResponse, ArtworkUpdate
+
+router = APIRouter(prefix="/artworks", tags=["artworks"])
+
+
+@router.post(
+    "",
+    response_model=ArtworkResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_artwork(
+    payload: ArtworkCreate,
+    current_user: Annotated[User, Depends(require_approved_seller)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Artwork:
+    artwork = Artwork(
+        seller_id=current_user.id,
+        title=payload.title.strip(),
+        description=payload.description.strip(),
+        price=payload.price,
+        category=payload.category.strip(),
+        state=payload.state.strip(),
+        image_url=payload.image_url.strip(),
+        cloudinary_public_id=payload.cloudinary_public_id,
+        status="draft",
+    )
+
+    db.add(artwork)
+    db.commit()
+    db.refresh(artwork)
+
+    return artwork
+
+
+@router.patch(
+    "/{artwork_id}",
+    response_model=ArtworkResponse,
+)
+def update_artwork(
+    artwork_id: int,
+    payload: ArtworkUpdate,
+    current_user: Annotated[User, Depends(require_approved_seller)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Artwork:
+    artwork = db.get(Artwork, artwork_id)
+
+    if artwork is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artwork not found.",
+        )
+
+    if artwork.seller_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only edit your own artwork.",
+        )
+
+    updates = payload.model_dump(exclude_unset=True)
+
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided to update.",
+        )
+
+    for field, value in updates.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"{field} cannot be empty.",
+                )
+
+        setattr(artwork, field, value)
+
+    db.commit()
+    db.refresh(artwork)
+
+    return artwork
+
+
+@router.delete(
+    "/{artwork_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_artwork(
+    artwork_id: int,
+    current_user: Annotated[User, Depends(require_approved_seller)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    artwork = db.get(Artwork, artwork_id)
+
+    if artwork is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artwork not found.",
+        )
+
+    if artwork.seller_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own artwork.",
+        )
+
+    # Delete the Cloudinary image first, if its public ID is stored.
+    if artwork.cloudinary_public_id:
+        try:
+            result = cloudinary.uploader.destroy(
+                artwork.cloudinary_public_id,
+                resource_type="image",
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Could not delete the artwork image. Please try again.",
+            ) from exc
+
+        if result.get("result") not in {"ok", "not found"}:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Cloudinary did not confirm image deletion.",
+            )
+
+    db.delete(artwork)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch(
+    "/{artwork_id}/publish",
+    response_model=ArtworkResponse,
+)
+def publish_artwork(
+    artwork_id: int,
+    current_user: Annotated[User, Depends(require_approved_seller)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Artwork:
+    artwork = db.get(Artwork, artwork_id)
+
+    if artwork is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artwork not found.",
+        )
+
+    if artwork.seller_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only publish your own artwork.",
+        )
+
+    if artwork.status != "draft":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only draft artworks can be published.",
+        )
+
+    artwork.status = "published"
+
+    db.commit()
+    db.refresh(artwork)
+
+    return artwork
+
+
+@router.get(
+    "",
+    response_model=list[ArtworkResponse],
+)
+def list_artworks(
+    db: Annotated[Session, Depends(get_db)],
+    category: Annotated[
+        str | None,
+        Query(min_length=1, max_length=100),
+    ] = None,
+    state: Annotated[
+        str | None,
+        Query(min_length=1, max_length=100),
+    ] = None,
+    sort_by: Annotated[
+        str,
+        Query(pattern="^(newest|price_asc|price_desc)$"),
+    ] = "newest",
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[Artwork]:
+    query = db.query(Artwork).filter(
+        Artwork.status == "published"
+    )
+
+    if category:
+        query = query.filter(
+            Artwork.category.ilike(category.strip())
+        )
+
+    if state:
+        query = query.filter(
+            Artwork.state.ilike(state.strip())
+        )
+
+    if sort_by == "price_asc":
+        query = query.order_by(Artwork.price.asc())
+    elif sort_by == "price_desc":
+        query = query.order_by(Artwork.price.desc())
+    else:
+        query = query.order_by(Artwork.created_at.desc())
+
+    return query.offset(offset).limit(limit).all()
+
+@router.get(
+    "/{artwork_id}",
+    response_model=ArtworkResponse,
+)
+def get_artwork(
+    artwork_id: int,
+    db: Annotated[Session, Depends(get_db)],
+) -> Artwork:
+    artwork = db.get(Artwork, artwork_id)
+
+    if artwork is None or artwork.status != "published":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artwork not found.",
+        )
+
+    return artwork
+

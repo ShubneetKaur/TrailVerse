@@ -11,6 +11,7 @@ from alembic import context
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.db.session import Base, settings
+from app.models.seller_application import SellerApplication  # noqa: F401
 from app.models.user import User  # noqa: F401
 
 # this is the Alembic Config object, which provides
