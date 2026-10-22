@@ -135,6 +135,10 @@ def review_seller_application(
         )
 
     application.status = payload.status.value
+    if application.status == SellerApplicationStatus.approved.value:
+        applicant = db.get(User, application.applicant_id)
+        if applicant is not None:
+            applicant.role = "seller"
     application.review_notes = (
         payload.review_notes.strip()
         if payload.review_notes is not None

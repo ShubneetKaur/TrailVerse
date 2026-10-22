@@ -99,7 +99,7 @@ class TestSellerApplications(unittest.TestCase):
         self.assertEqual(reviewed.status, "approved")
         self.assertEqual(reviewed.reviewed_by_id, self.admin.id)
         self.assertIsInstance(reviewed.reviewed_at, datetime)
-        self.assertEqual(self.db.get(User, self.customer.id).role, "customer")
+        self.assertEqual(self.db.get(User, self.customer.id).role, "seller")
 
     def test_review_requires_notes_for_rejection_or_more_information(self) -> None:
         with self.assertRaises(ValueError):

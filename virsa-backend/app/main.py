@@ -6,6 +6,7 @@ from app.api.routes import uploads
 from app.api.routes.seller_applications import (
     router as seller_applications_router,
 )
+from app.api.routes.sellers import router as sellers_router
 from app.api.routes.artworks import router as artworks_router
 
 app = FastAPI(
@@ -16,6 +17,7 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(seller_applications_router)
+app.include_router(sellers_router)
 app.include_router(artworks_router)
 app.include_router(uploads.router)
 

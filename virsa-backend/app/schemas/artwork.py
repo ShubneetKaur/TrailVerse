@@ -43,3 +43,9 @@ class ArtworkResponse(BaseModel):
     cloudinary_public_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class ArtworkListResponse(BaseModel):
+    items: list[ArtworkResponse]
+    total: int
+    limit: int
+    offset: int

@@ -25,6 +25,7 @@
 - [ADR-013: Streamlined Minimal Backend Architecture](#adr-013-streamlined-minimal-backend-architecture)
 - [ADR-014: Modern Authentication Cryptography (pwdlib[argon2] & PyJWT)](#adr-014-modern-authentication-cryptography-pwdlibargon2--pyjwt)
 - [ADR-016: Seller Verification Applications](#adr-016-seller-verification-applications)
+- [ADR-017: Seller Role Promotion on Approval](#adr-017-seller-role-promotion-on-approval)
 
 ---
 
@@ -76,6 +77,7 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-014** | Modern Authentication Cryptography (`pwdlib[argon2]` & `PyJWT`) | `Implemented` | Security / Crypto & Auth |
 | **ADR-015** | Reusable Role-Based Access Dependency | `Implemented` | Authorization & API |
 | **ADR-016** | Seller Verification Applications | `Implemented` | Seller Verification & Database |
+| **ADR-017** | Seller Role Promotion on Approval | `Implemented` | Seller Verification & Authorization |
 
 ---
 
@@ -421,7 +423,7 @@ Implement `require_role(*allowed_roles)` in `app/dependencies.py` as a dependenc
 ## ADR-016: Seller Verification Applications
 
 - **Date:** 2026-10-22
-- **Status:** `Implemented`
+- **Status:** `Superseded by ADR-017`
 - **Components:** Seller Verification, Authorization & Database
 
 ### Context
@@ -434,11 +436,29 @@ Add a `seller_applications` table and API workflow:
 - Customers can submit applications and view only their own applications.
 - Administrators can list, inspect, and review applications.
 - Rejection and requests for more information require review notes.
-- Approval does not change `users.role`.
+- Approval does not change `users.role`; this was later superseded by ADR-017.
 
 ### Consequences & Rationale
 - **Benefits:** Provides a minimal auditable verification workflow with least-privilege authorization and clear separation between verification state and user authorization.
 - **Trade-offs / Risks:** Seller role promotion, document uploads, application updates after a request for more information, and marketplace capabilities require future decisions and implementation.
+
+---
+
+## ADR-017: Seller Role Promotion on Approval
+
+- **Date:** 2026-10-22
+- **Status:** `Implemented`
+- **Components:** Seller Verification & Authorization
+
+### Context
+The seller profile endpoint and seller-only capabilities use the `seller` role, while seller applications are reviewed by administrators. Approved applicants therefore need a controlled transition from the default `customer` role to `seller`.
+
+### Decision
+When an administrator approves a seller application, the review workflow sets the associated user's role to `seller` in the same database transaction as the application review metadata. Rejected and `needs_more_info` decisions do not promote the user.
+
+### Consequences & Rationale
+- **Benefits:** Approved users can access seller profile and seller-only functionality without relying on request-body role fields or privileged self-assignment.
+- **Trade-offs / Risks:** A future role-revocation or seller suspension workflow must define how the user's role and application history are reconciled.
 
 ---
 

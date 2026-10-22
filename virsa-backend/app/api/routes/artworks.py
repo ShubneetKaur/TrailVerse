@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_db, require_approved_seller
 from app.models.artwork import Artwork
 from app.models.user import User
-from app.schemas.artwork import ArtworkCreate, ArtworkResponse, ArtworkUpdate
+from app.schemas.artwork import (
+    ArtworkCreate,
+    ArtworkListResponse,
+    ArtworkResponse,
+    ArtworkUpdate,
+)
 
 router = APIRouter(prefix="/artworks", tags=["artworks"])
 
@@ -177,7 +182,7 @@ def publish_artwork(
 
 @router.get(
     "",
-    response_model=list[ArtworkResponse],
+    response_model=ArtworkListResponse,
 )
 def list_artworks(
     db: Annotated[Session, Depends(get_db)],
@@ -195,7 +200,7 @@ def list_artworks(
     ] = "newest",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[Artwork]:
+) -> ArtworkListResponse:
     query = db.query(Artwork).filter(
         Artwork.status == "published"
     )
@@ -210,6 +215,8 @@ def list_artworks(
             Artwork.state.ilike(state.strip())
         )
 
+    total = query.count()
+
     if sort_by == "price_asc":
         query = query.order_by(Artwork.price.asc())
     elif sort_by == "price_desc":
@@ -217,7 +224,14 @@ def list_artworks(
     else:
         query = query.order_by(Artwork.created_at.desc())
 
-    return query.offset(offset).limit(limit).all()
+    items = query.offset(offset).limit(limit).all()
+
+    return ArtworkListResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 @router.get(
     "/{artwork_id}",
@@ -236,4 +250,3 @@ def get_artwork(
         )
 
     return artwork
-
