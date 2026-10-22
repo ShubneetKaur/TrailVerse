@@ -3,16 +3,15 @@ from collections.abc import Generator
 
 import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.db.session import SessionLocal
 from app.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
-)
+bearer_scheme = HTTPBearer()
+
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -24,27 +23,28 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    unauthorized = HTTPException(
+    unautharized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired authentication token.",
+        detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
-    )
+)
 
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(credentials.credentials)
         subject = payload.get("sub")
 
         if not isinstance(subject, str) or not subject.isdigit():
-            raise unauthorized
-    except jwt.InvalidTokenError as exc:
-        raise unauthorized from exc
+            raise unautharized
+    except jwt.PyJWTError as exc:
+        raise unautharized from exc
 
-    user = db.get(User, int(subject))
+    current_user = db.get(User, int(subject))
 
-    if user is None or not user.is_active:
-        raise unauthorized
+    if current_user is None or not current_user.is_active:
+        raise unautharized
 
-    return user
+    return current_user
+            
