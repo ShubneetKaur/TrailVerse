@@ -1,10 +1,12 @@
 API_PREFIX = "/api/v1"
 
 import pytest
+from unittest.mock import patch
 
 from app.models.user import User
 from app.models.seller_application import SellerApplication
 from app.models.artwork import Artwork
+from app.models.uploaded_asset import UploadedAsset
 
 
 def register_and_login(client, name, email, password="password123"):
@@ -325,6 +327,111 @@ def test_seller_can_delete_own_artwork(client, db_session):
 
     assert response.status_code == 204
     assert db_session.get(Artwork, artwork_id) is None
+
+
+def test_owned_asset_is_attached_and_deleted_safely(client, db_session):
+    headers = register_and_login(
+        client, "Asset Seller", "asset-seller@example.com"
+    )
+    seller = approve_seller(db_session, "asset-seller@example.com")
+    asset = UploadedAsset(
+        owner_id=seller.id,
+        public_id="virsa/artworks/owned-image",
+        image_url="https://res.cloudinary.com/demo/image/upload/owned-image",
+    )
+    db_session.add(asset)
+    db_session.commit()
+
+    created = create_artwork(
+        client,
+        headers,
+        cloudinary_public_id=asset.public_id,
+        image_url=asset.image_url,
+    )
+    assert created.status_code == 201
+    artwork_id = created.json()["id"]
+
+    update = client.patch(
+        f"{API_PREFIX}/artworks/{artwork_id}",
+        headers=headers,
+        json={"image_url": "https://example.com/replaced.jpg"},
+    )
+    assert update.status_code == 400
+
+    with patch(
+        "app.api.routes.artworks.cloudinary.uploader.destroy",
+        return_value={"result": "ok"},
+    ) as mocked_destroy:
+        response = client.delete(
+            f"{API_PREFIX}/artworks/{artwork_id}",
+            headers=headers,
+        )
+
+    assert response.status_code == 204
+    mocked_destroy.assert_called_once_with(
+        asset.public_id,
+        resource_type="image",
+    )
+    assert db_session.get(UploadedAsset, asset.id) is None
+
+
+def test_forged_cross_seller_asset_is_not_attached_or_deleted(
+    client, db_session
+):
+    owner_headers = register_and_login(
+        client, "Asset Owner", "asset-owner@example.com"
+    )
+    attacker_headers = register_and_login(
+        client, "Asset Attacker", "asset-attacker@example.com"
+    )
+    owner = approve_seller(db_session, "asset-owner@example.com")
+    approve_seller(db_session, "asset-attacker@example.com")
+    asset = UploadedAsset(
+        owner_id=owner.id,
+        public_id="virsa/artworks/owner-image",
+        image_url="https://res.cloudinary.com/demo/image/upload/owner-image",
+    )
+    db_session.add(asset)
+    db_session.commit()
+
+    forged = create_artwork(
+        client,
+        attacker_headers,
+        cloudinary_public_id=asset.public_id,
+        image_url=asset.image_url,
+    )
+    assert forged.status_code == 403
+
+    artwork = Artwork(
+        seller_id=(
+            db_session.query(User)
+            .filter(User.email == "asset-attacker@example.com")
+            .one()
+            .id
+        ),
+        title="Forged artwork",
+        description="Should fail closed on deletion.",
+        price="10.00",
+        category="Textiles",
+        state="Punjab",
+        image_url=asset.image_url,
+        cloudinary_public_id=asset.public_id,
+        status="draft",
+    )
+    db_session.add(artwork)
+    db_session.commit()
+
+    with patch(
+        "app.api.routes.artworks.cloudinary.uploader.destroy"
+    ) as mocked_destroy:
+        response = client.delete(
+            f"{API_PREFIX}/artworks/{artwork.id}",
+            headers=attacker_headers,
+        )
+
+    assert response.status_code == 204
+    mocked_destroy.assert_not_called()
+    assert db_session.get(UploadedAsset, asset.id) is not None
 
 
 def test_seller_cannot_delete_another_sellers_artwork(

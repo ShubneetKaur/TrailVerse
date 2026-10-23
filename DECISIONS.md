@@ -28,6 +28,7 @@
 - [ADR-017: Seller Role Promotion on Approval](#adr-017-seller-role-promotion-on-approval)
 - [ADR-018: Explicit Vite Development CORS Origin](#adr-018-explicit-vite-development-cors-origin)
 - [ADR-019: Persistent Customer Carts and Explicit Artwork Stock](#adr-019-persistent-customer-carts-and-explicit-artwork-stock)
+- [ADR-021: Server-Owned Cloudinary Artwork Assets](#adr-021-server-owned-cloudinary-artwork-assets)
 
 ---
 
@@ -82,6 +83,7 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-017** | Seller Role Promotion on Approval | `Implemented` | Seller Verification & Authorization |
 | **ADR-018** | Explicit Vite Development CORS Origin | `Implemented` | API & Security |
 | **ADR-019** | Persistent Customer Carts and Explicit Artwork Stock | `Implemented` | Marketplace / Database |
+| **ADR-021** | Server-Owned Cloudinary Artwork Assets | `Implemented` | Uploads / Artwork Security |
 
 ---
 
@@ -522,6 +524,25 @@ Orders use `pending` and `cancelled` statuses, store `INR`, and may be cancelled
 - **Benefits:** Prevents overselling at the database write boundary, preserves listed/agreed price history, and keeps cancellation inventory restoration atomic.
 - **Trade-offs / Risks:** Payment, expiry, refunds, shipping, negotiation, and PostgreSQL concurrency validation remain outside this phase. Pending orders consume stock until cancellation.
 - **Alternatives Considered:** Relying only on pre-checkout reads or `SELECT ... FOR UPDATE` was rejected because carts are not reservations and SQLite does not provide row-level locking.
+
+---
+
+### ADR-021: Server-Owned Cloudinary Artwork Assets
+
+- **Date:** 2026-10-23
+- **Status:** `Implemented`
+- **Components:** Uploads / Artwork Security / Database
+
+#### Context
+Artwork records previously accepted a client-supplied Cloudinary public ID, and deletion used that ID with Cloudinary credentials without a server-side ownership record.
+
+#### Decision
+Create a persistent upload-asset record when an approved seller's image upload succeeds. Artwork creation may attach only an unassigned asset owned by the authenticated seller, and artwork deletion may call Cloudinary only for the matching owned asset. Cloudinary-backed artwork image URLs are immutable through the general artwork update endpoint.
+
+#### Consequences & Rationale
+- **Benefits:** Cloudinary destructive operations are bound to server-recorded seller ownership and one artwork attachment.
+- **Trade-offs / Risks:** Existing artwork rows with an ID but no ownership record fail closed and are deleted without a Cloudinary call; clients must upload images before attaching them to artwork.
+- **Alternatives Considered:** Trusting client-supplied IDs or URLs was rejected because public Cloudinary identifiers are not proof of ownership.
 
 ---
 
