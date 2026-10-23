@@ -94,6 +94,36 @@ def test_customer_cannot_create_artwork(client):
     assert response.status_code == 403
 
 
+def test_approved_application_without_seller_role_cannot_create_artwork(
+    client, db_session
+):
+    headers = register_and_login(
+        client, "Unpromoted Applicant", "unpromoted@example.com"
+    )
+    user = (
+        db_session.query(User)
+        .filter(User.email == "unpromoted@example.com")
+        .first()
+    )
+    assert user is not None
+    db_session.add(
+        SellerApplication(
+            applicant_id=user.id,
+            business_name="Heritage Studio",
+            description=(
+                "We create and sell traditional handcrafted goods "
+                "made by skilled local artisans."
+            ),
+            status="approved",
+        )
+    )
+    db_session.commit()
+
+    response = create_artwork(client, headers)
+
+    assert response.status_code == 403
+
+
 def test_unauthenticated_user_cannot_create_artwork(client):
     response = client.post("/artworks", json=artwork_payload())
 
@@ -161,6 +191,55 @@ def test_seller_can_publish_own_draft(client, db_session):
 
     assert response.status_code == 200
     assert response.json()["status"] == "published"
+
+
+def test_seller_mine_and_stats_include_only_own_artworks(
+    client, db_session
+):
+    owner_headers = register_and_login(
+        client, "Stats Owner", "stats-owner@example.com"
+    )
+    other_headers = register_and_login(
+        client, "Stats Other", "stats-other@example.com"
+    )
+    approve_seller(db_session, "stats-owner@example.com")
+    approve_seller(db_session, "stats-other@example.com")
+
+    owner_draft = create_artwork(client, owner_headers, title="Owner Draft")
+    owner_published = create_artwork(
+        client, owner_headers, title="Owner Published"
+    )
+    other_artwork = create_artwork(
+        client, other_headers, title="Other Artwork"
+    )
+    assert owner_draft.status_code == 201
+    assert owner_published.status_code == 201
+    assert other_artwork.status_code == 201
+
+    publish_response = client.patch(
+        f"/artworks/{owner_published.json()['id']}/publish",
+        headers=owner_headers,
+    )
+    assert publish_response.status_code == 200
+
+    mine_response = client.get("/artworks/mine", headers=owner_headers)
+    stats_response = client.get(
+        "/artworks/mine/stats",
+        headers=owner_headers,
+    )
+
+    assert mine_response.status_code == 200
+    assert {item["title"] for item in mine_response.json()["items"]} == {
+        "Owner Draft",
+        "Owner Published",
+    }
+    assert stats_response.status_code == 200
+    assert stats_response.json() == {
+        "total": 2,
+        "draft": 1,
+        "published": 1,
+        "archived": 0,
+    }
 
 
 def test_public_catalog_hides_drafts_and_shows_published(

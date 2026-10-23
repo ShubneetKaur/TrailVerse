@@ -1,4 +1,8 @@
 import pytest
+from datetime import timedelta
+
+from app.core.security import create_access_token
+from app.models.user import User
 
 
 def test_register_user_returns_customer(client):
@@ -103,6 +107,44 @@ def test_login_rejects_wrong_password(client):
             "email": "wrong-password@example.com",
             "password": "wrongpassword",
         },
+    )
+
+    assert response.status_code == 401
+
+
+def test_login_rejects_inactive_user(client, db_session):
+    client.post(
+        "/auth/register",
+        json={
+            "name": "Inactive User",
+            "email": "inactive@example.com",
+            "password": "password123",
+        },
+    )
+    user = db_session.query(User).filter(
+        User.email == "inactive@example.com"
+    ).first()
+    assert user is not None
+    user.is_active = False
+    db_session.commit()
+
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "inactive@example.com",
+            "password": "password123",
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_auth_me_rejects_expired_token(client):
+    token = create_access_token("999", timedelta(seconds=-1))
+
+    response = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 401

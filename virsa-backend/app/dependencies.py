@@ -79,7 +79,13 @@ def require_approved_seller(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
-    """Require the current user to have an approved seller application."""
+    """Require an active seller with an approved application."""
+    if current_user.role != "seller":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="An approved seller application is required.",
+        )
+
     application = (
         db.query(SellerApplication)
         .filter(

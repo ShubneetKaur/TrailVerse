@@ -46,6 +46,30 @@ Every contributor and AI agent must review and keep `DECISIONS.md` updated as ne
    - Swagger UI: `http://localhost:8000/api/v1/docs`
    - ReDoc: `http://localhost:8000/api/v1/redoc`
 
+### Promote an existing local admin account
+
+From the `virsa-backend` directory, opt in explicitly and pass the existing account email:
+
+```powershell
+$env:ALLOW_ADMIN_PROMOTION = "true"
+$env:APP_ENV = "development"
+..\.venv\Scripts\python.exe .\create_admin.py --email "admin@example.com"
+```
+
+The script never creates an account or changes its password. It refuses production-like environments and requires an existing user. After promotion, log in again to obtain a fresh access token before testing `GET /admin/dashboard/stats`.
+
+### Reset an existing local development password
+
+From the `virsa-backend` directory, opt in explicitly and pass the existing account email. The script prompts for the password without displaying it:
+
+```powershell
+$env:ALLOW_DEV_PASSWORD_RESET = "true"
+$env:APP_ENV = "development"
+..\.venv\Scripts\python.exe .\reset_dev_password.py --email "user@example.com"
+```
+
+The script uses the existing password-hashing utility, changes only the password hash, refuses production-like environments, and requires an existing user. It never prints or stores the password.
+
 ### Seller verification endpoints
 
 - `POST /seller-applications`: Submit a seller application as a customer.
