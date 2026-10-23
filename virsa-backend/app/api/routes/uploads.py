@@ -12,10 +12,13 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy.orm import Session
 
 from app.core import cloudinary_config
 from app.dependencies import require_approved_seller
+from app.dependencies import get_db
 from app.models.user import User
+from app.models.uploaded_asset import UploadedAsset
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
@@ -33,6 +36,7 @@ async def upload_artwork_image(
     current_user: Annotated[
         User, Depends(require_approved_seller)
     ],
+    db: Annotated[Session, Depends(get_db)],
     file: Annotated[UploadFile, File(...)],
 ):
     if file.content_type not in ALLOWED_CONTENT_TYPES:
@@ -92,7 +96,15 @@ async def upload_artwork_image(
             detail="Image upload failed. Please try again.",
         ) from exc
 
+    asset = UploadedAsset(
+        owner_id=current_user.id,
+        public_id=result["public_id"],
+        image_url=result["secure_url"],
+    )
+    db.add(asset)
+    db.commit()
+
     return {
-        "image_url": result["secure_url"],
-        "public_id": result["public_id"],
+        "image_url": asset.image_url,
+        "public_id": asset.public_id,
     }

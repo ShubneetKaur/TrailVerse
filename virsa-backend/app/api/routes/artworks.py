@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_db, require_approved_seller
 from app.models.artwork import Artwork
 from app.models.user import User
+from app.models.uploaded_asset import UploadedAsset
 from app.schemas.artwork import (
     ArtworkCreate,
     ArtworkListResponse,
@@ -27,19 +28,45 @@ def create_artwork(
     current_user: Annotated[User, Depends(require_approved_seller)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Artwork:
+    asset = None
+    if payload.cloudinary_public_id:
+        asset = (
+            db.query(UploadedAsset)
+            .filter(
+                UploadedAsset.public_id == payload.cloudinary_public_id,
+                UploadedAsset.owner_id == current_user.id,
+                UploadedAsset.artwork_id.is_(None),
+            )
+            .first()
+        )
+        if asset is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only attach your own uploaded image.",
+            )
+        if payload.image_url.strip() != asset.image_url:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Artwork image details do not match the uploaded image.",
+            )
+
     artwork = Artwork(
         seller_id=current_user.id,
         title=payload.title.strip(),
         description=payload.description.strip(),
         price=payload.price,
+        stock_quantity=payload.stock_quantity,
         category=payload.category.strip(),
         state=payload.state.strip(),
-        image_url=payload.image_url.strip(),
-        cloudinary_public_id=payload.cloudinary_public_id,
+        image_url=asset.image_url if asset else payload.image_url.strip(),
+        cloudinary_public_id=asset.public_id if asset else None,
         status="draft",
     )
 
     db.add(artwork)
+    if asset:
+        db.flush()
+        asset.artwork_id = artwork.id
     db.commit()
     db.refresh(artwork)
 
@@ -76,6 +103,12 @@ def update_artwork(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No fields provided to update.",
+        )
+
+    if "image_url" in updates and artwork.cloudinary_public_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cloudinary-backed artwork images cannot be replaced.",
         )
 
     for field, value in updates.items():
@@ -119,10 +152,21 @@ def delete_artwork(
         )
 
     # Delete the Cloudinary image first, if its public ID is stored.
+    asset = None
     if artwork.cloudinary_public_id:
+        asset = (
+            db.query(UploadedAsset)
+            .filter(
+                UploadedAsset.public_id == artwork.cloudinary_public_id,
+                UploadedAsset.owner_id == current_user.id,
+                UploadedAsset.artwork_id == artwork.id,
+            )
+            .first()
+        )
+    if asset:
         try:
             result = cloudinary.uploader.destroy(
-                artwork.cloudinary_public_id,
+                asset.public_id,
                 resource_type="image",
             )
         except Exception as exc:
@@ -137,6 +181,8 @@ def delete_artwork(
                 detail="Cloudinary did not confirm image deletion.",
             )
 
+    if asset:
+        db.delete(asset)
     db.delete(artwork)
     db.commit()
 

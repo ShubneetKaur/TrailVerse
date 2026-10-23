@@ -1,3 +1,5 @@
+API_PREFIX = "/api/v1"
+
 from io import BytesIO
 from unittest.mock import patch
 
@@ -5,17 +7,18 @@ from PIL import Image
 
 from app.models.user import User
 from app.models.seller_application import SellerApplication
+from app.models.uploaded_asset import UploadedAsset
 
 
 def register_and_login(client, name, email, password="password123"):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={"name": name, "email": email, "password": password},
     )
     assert response.status_code == 201
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert response.status_code == 200
@@ -54,7 +57,7 @@ def make_png():
 def upload(client, headers, content, filename="test.png",
            content_type="image/png"):
     return client.post(
-        "/uploads/artwork-image",
+        f"{API_PREFIX}/uploads/artwork-image",
         headers=headers,
         files={"file": (filename, content, content_type)},
     )
@@ -84,6 +87,11 @@ def test_valid_png_upload_returns_cloudinary_details(client, db_session):
         "image_url": fake_result["secure_url"],
         "public_id": fake_result["public_id"],
     }
+    asset = db_session.query(UploadedAsset).one()
+    assert asset.public_id == fake_result["public_id"]
+    assert asset.owner_id == db_session.query(User).filter(
+        User.email == "upload-seller@example.com"
+    ).one().id
     mocked_upload.assert_called_once()
 
 

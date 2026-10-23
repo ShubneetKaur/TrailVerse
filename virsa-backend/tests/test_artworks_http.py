@@ -1,13 +1,17 @@
+API_PREFIX = "/api/v1"
+
 import pytest
+from unittest.mock import patch
 
 from app.models.user import User
 from app.models.seller_application import SellerApplication
 from app.models.artwork import Artwork
+from app.models.uploaded_asset import UploadedAsset
 
 
 def register_and_login(client, name, email, password="password123"):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": name,
             "email": email,
@@ -17,7 +21,7 @@ def register_and_login(client, name, email, password="password123"):
     assert response.status_code == 201
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert response.status_code == 200
@@ -63,7 +67,7 @@ def artwork_payload(**overrides):
 
 def create_artwork(client, headers, **overrides):
     return client.post(
-        "/artworks",
+        f"{API_PREFIX}/artworks",
         headers=headers,
         json=artwork_payload(**overrides),
     )
@@ -125,7 +129,7 @@ def test_approved_application_without_seller_role_cannot_create_artwork(
 
 
 def test_unauthenticated_user_cannot_create_artwork(client):
-    response = client.post("/artworks", json=artwork_payload())
+    response = client.post(f"{API_PREFIX}/artworks", json=artwork_payload())
 
     assert response.status_code == 401
 
@@ -141,7 +145,7 @@ def test_seller_can_edit_own_artwork(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=headers,
         json={"title": "Updated Shawl", "price": "1799.00"},
     )
@@ -166,7 +170,7 @@ def test_seller_cannot_edit_another_sellers_artwork(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=other_headers,
         json={"title": "Stolen Edit"},
     )
@@ -185,7 +189,7 @@ def test_seller_can_publish_own_draft(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=headers,
     )
 
@@ -217,14 +221,14 @@ def test_seller_mine_and_stats_include_only_own_artworks(
     assert other_artwork.status_code == 201
 
     publish_response = client.patch(
-        f"/artworks/{owner_published.json()['id']}/publish",
+        f"{API_PREFIX}/artworks/{owner_published.json()['id']}/publish",
         headers=owner_headers,
     )
     assert publish_response.status_code == 200
 
-    mine_response = client.get("/artworks/mine", headers=owner_headers)
+    mine_response = client.get(f"{API_PREFIX}/artworks/mine", headers=owner_headers)
     stats_response = client.get(
-        "/artworks/mine/stats",
+        f"{API_PREFIX}/artworks/mine/stats",
         headers=owner_headers,
     )
 
@@ -263,20 +267,20 @@ def test_public_catalog_hides_drafts_and_shows_published(
     published_id = published.json()["id"]
 
     publish_response = client.patch(
-        f"/artworks/{published_id}/publish",
+        f"{API_PREFIX}/artworks/{published_id}/publish",
         headers=headers,
     )
     assert publish_response.status_code == 200
 
-    catalog = client.get("/artworks")
+    catalog = client.get(f"{API_PREFIX}/artworks")
     assert catalog.status_code == 200
 
     titles = [item["title"] for item in catalog.json()["items"]]
     assert "Public Shawl" in titles
     assert "Private Draft" not in titles
 
-    hidden_detail = client.get(f"/artworks/{draft_id}")
-    visible_detail = client.get(f"/artworks/{published_id}")
+    hidden_detail = client.get(f"{API_PREFIX}/artworks/{draft_id}")
+    visible_detail = client.get(f"{API_PREFIX}/artworks/{published_id}")
 
     assert hidden_detail.status_code == 404
     assert visible_detail.status_code == 200
@@ -299,7 +303,7 @@ def test_seller_cannot_publish_another_sellers_artwork(
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=other_headers,
     )
 
@@ -317,12 +321,117 @@ def test_seller_can_delete_own_artwork(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.delete(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=headers,
     )
 
     assert response.status_code == 204
     assert db_session.get(Artwork, artwork_id) is None
+
+
+def test_owned_asset_is_attached_and_deleted_safely(client, db_session):
+    headers = register_and_login(
+        client, "Asset Seller", "asset-seller@example.com"
+    )
+    seller = approve_seller(db_session, "asset-seller@example.com")
+    asset = UploadedAsset(
+        owner_id=seller.id,
+        public_id="virsa/artworks/owned-image",
+        image_url="https://res.cloudinary.com/demo/image/upload/owned-image",
+    )
+    db_session.add(asset)
+    db_session.commit()
+
+    created = create_artwork(
+        client,
+        headers,
+        cloudinary_public_id=asset.public_id,
+        image_url=asset.image_url,
+    )
+    assert created.status_code == 201
+    artwork_id = created.json()["id"]
+
+    update = client.patch(
+        f"{API_PREFIX}/artworks/{artwork_id}",
+        headers=headers,
+        json={"image_url": "https://example.com/replaced.jpg"},
+    )
+    assert update.status_code == 400
+
+    with patch(
+        "app.api.routes.artworks.cloudinary.uploader.destroy",
+        return_value={"result": "ok"},
+    ) as mocked_destroy:
+        response = client.delete(
+            f"{API_PREFIX}/artworks/{artwork_id}",
+            headers=headers,
+        )
+
+    assert response.status_code == 204
+    mocked_destroy.assert_called_once_with(
+        asset.public_id,
+        resource_type="image",
+    )
+    assert db_session.get(UploadedAsset, asset.id) is None
+
+
+def test_forged_cross_seller_asset_is_not_attached_or_deleted(
+    client, db_session
+):
+    owner_headers = register_and_login(
+        client, "Asset Owner", "asset-owner@example.com"
+    )
+    attacker_headers = register_and_login(
+        client, "Asset Attacker", "asset-attacker@example.com"
+    )
+    owner = approve_seller(db_session, "asset-owner@example.com")
+    approve_seller(db_session, "asset-attacker@example.com")
+    asset = UploadedAsset(
+        owner_id=owner.id,
+        public_id="virsa/artworks/owner-image",
+        image_url="https://res.cloudinary.com/demo/image/upload/owner-image",
+    )
+    db_session.add(asset)
+    db_session.commit()
+
+    forged = create_artwork(
+        client,
+        attacker_headers,
+        cloudinary_public_id=asset.public_id,
+        image_url=asset.image_url,
+    )
+    assert forged.status_code == 403
+
+    artwork = Artwork(
+        seller_id=(
+            db_session.query(User)
+            .filter(User.email == "asset-attacker@example.com")
+            .one()
+            .id
+        ),
+        title="Forged artwork",
+        description="Should fail closed on deletion.",
+        price="10.00",
+        category="Textiles",
+        state="Punjab",
+        image_url=asset.image_url,
+        cloudinary_public_id=asset.public_id,
+        status="draft",
+    )
+    db_session.add(artwork)
+    db_session.commit()
+
+    with patch(
+        "app.api.routes.artworks.cloudinary.uploader.destroy"
+    ) as mocked_destroy:
+        response = client.delete(
+            f"{API_PREFIX}/artworks/{artwork.id}",
+            headers=attacker_headers,
+        )
+
+    assert response.status_code == 204
+    mocked_destroy.assert_not_called()
+    assert db_session.get(UploadedAsset, asset.id) is not None
 
 
 def test_seller_cannot_delete_another_sellers_artwork(
@@ -342,7 +451,7 @@ def test_seller_cannot_delete_another_sellers_artwork(
     artwork_id = created.json()["id"]
 
     response = client.delete(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=other_headers,
     )
 
@@ -363,11 +472,11 @@ def test_seller_cannot_publish_same_artwork_twice(
     artwork_id = created.json()["id"]
 
     first = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=headers,
     )
     second = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=headers,
     )
 

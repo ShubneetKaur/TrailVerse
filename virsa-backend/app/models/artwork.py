@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -26,6 +27,10 @@ class Artwork(Base):
         CheckConstraint(
             "status IN ('draft', 'published', 'archived')",
             name="ck_artworks_status",
+        ),
+        CheckConstraint(
+            "stock_quantity IS NULL OR stock_quantity >= 0",
+            name="ck_artworks_stock_nonnegative",
         ),
         Index("ix_artworks_seller_id", "seller_id"),
         Index("ix_artworks_category", "category"),
@@ -55,6 +60,11 @@ class Artwork(Base):
     price: Mapped[float] = mapped_column(
         Numeric(10, 2),
         nullable=False,
+    )
+
+    stock_quantity: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
     )
 
     category: Mapped[str] = mapped_column(

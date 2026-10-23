@@ -79,3 +79,27 @@ The script uses the existing password-hashing utility, changes only the password
 - `PATCH /seller-applications/{application_id}/review`: Approve, reject, or request more information as an admin.
 
 Approval records verification status only; it does not change the user's role.
+
+### PostgreSQL checkout concurrency tests
+
+The PostgreSQL concurrency tests are opt-in and skipped by the normal test
+suite unless `POSTGRES_TEST_DATABASE_URL` is set. They require a dedicated,
+disposable PostgreSQL database; never point this variable at the development
+database.
+
+From `virsa-backend`, start the local test-only service without putting a
+password in tracked files:
+
+```powershell
+$env:POSTGRES_TEST_PASSWORD = "<local-only-password>"
+docker compose -f .\docker-compose.postgres-test.yml up -d --wait
+$env:POSTGRES_TEST_DATABASE_URL = "postgresql+psycopg://trailverse_test:<local-only-password>@localhost:55432/trailverse_test"
+$env:PYTHONPATH = "."
+..\.venv\Scripts\python.exe -m pytest -q tests\test_orders_postgres.py
+docker compose -f .\docker-compose.postgres-test.yml down -v
+```
+
+The integration fixture runs the Alembic migrations against the supplied
+PostgreSQL URL, truncates only its test tables between cases, and downgrades
+the disposable database during teardown. The normal SQLite suite does not
+connect to this service.
