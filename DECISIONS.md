@@ -26,6 +26,7 @@
 - [ADR-014: Modern Authentication Cryptography (pwdlib[argon2] & PyJWT)](#adr-014-modern-authentication-cryptography-pwdlibargon2--pyjwt)
 - [ADR-016: Seller Verification Applications](#adr-016-seller-verification-applications)
 - [ADR-017: Seller Role Promotion on Approval](#adr-017-seller-role-promotion-on-approval)
+- [ADR-018: Explicit Vite Development CORS Origin](#adr-018-explicit-vite-development-cors-origin)
 
 ---
 
@@ -78,6 +79,7 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-015** | Reusable Role-Based Access Dependency | `Implemented` | Authorization & API |
 | **ADR-016** | Seller Verification Applications | `Implemented` | Seller Verification & Database |
 | **ADR-017** | Seller Role Promotion on Approval | `Implemented` | Seller Verification & Authorization |
+| **ADR-018** | Explicit Vite Development CORS Origin | `Implemented` | API & Security |
 
 ---
 
@@ -459,6 +461,25 @@ When an administrator approves a seller application, the review workflow sets th
 ### Consequences & Rationale
 - **Benefits:** Approved users can access seller profile and seller-only functionality without relying on request-body role fields or privileged self-assignment.
 - **Trade-offs / Risks:** A future role-revocation or seller suspension workflow must define how the user's role and application history are reconciled.
+
+---
+
+## ADR-018: Explicit Vite Development CORS Origin
+
+- **Date:** 2026-10-23
+- **Status:** `Implemented`
+- **Components:** API & Security
+
+### Context
+The browser-based Vite frontend runs on its default development origin, `http://localhost:5173`, which is cross-origin from the backend. Without an explicit backend policy, browser requests and preflight requests from the frontend cannot access the API.
+
+### Decision
+Configure FastAPI's `CORSMiddleware` to allow only `http://localhost:5173`, the API methods currently used by the backend (`GET`, `POST`, `PATCH`, and `DELETE`), and the `Authorization` and `Content-Type` request headers. Do not enable credentialed cookie requests.
+
+### Consequences & Rationale
+- **Benefits:** Enables the local Vite frontend to call the API while restricting browser access to a single known development origin and the API's required methods and headers.
+- **Trade-offs / Risks:** Other frontend origins, including alternate hostnames or ports and production origins, must be explicitly configured when introduced.
+- **Alternatives Considered:** Allowing every origin was rejected because it is unnecessarily broad; configuring production origins is deferred until a production frontend origin is known.
 
 ---
 

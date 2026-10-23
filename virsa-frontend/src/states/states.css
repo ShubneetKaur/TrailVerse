@@ -1,0 +1,464 @@
+
+
+/* ========================================
+   VIRSA - STATES PAGE
+   Premium Indian Handicrafts Marketplace
+======================================== */
+
+.states-page {
+  --states-primary: #7b352b;
+  --states-primary-dark: #57231d;
+  --states-gold: #c49a52;
+  --states-cream: #fbf7f0;
+  --states-text: #29231f;
+  --states-muted: #786f68;
+
+  min-height: 100vh;
+  padding: 48px 6%;
+  background: var(--states-cream);
+  color: var(--states-text);
+  font-family: inherit;
+}
+
+/* Page heading */
+
+.states-header {
+  max-width: 760px;
+  margin: 0 auto 36px;
+  text-align: center;
+}
+
+.states-eyebrow {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--states-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.states-title {
+  margin: 0 0 14px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.states-description {
+  margin: 0 auto;
+  max-width: 600px;
+  color: var(--states-muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+/* Search states */
+
+.states-search-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 28px auto 40px;
+}
+
+.states-search {
+  width: min(100%, 480px);
+  padding: 14px 18px;
+  border: 1px solid #e4d8c9;
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+  color: var(--states-text);
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.states-search:focus {
+  border-color: var(--states-primary);
+  box-shadow: 0 0 0 3px rgb(123 53 43 / 10%);
+}
+
+/* States grid */
+
+.states-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Individual state card */
+
+.state-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #eadfd2;
+  border-radius: 16px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 5px 18px rgb(57 39 25 / 5%);
+  transition: transform 0.25s ease, box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.state-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--states-gold);
+  box-shadow: 0 14px 30px rgb(57 39 25 / 12%);
+}
+
+.state-card:focus-visible {
+  outline: 3px solid var(--states-gold);
+  outline-offset: 3px;
+}
+
+.state-card-image-wrapper {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: #eee4d8;
+}
+
+.state-card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.state-card:hover .state-card-image {
+  transform: scale(1.06);
+}
+
+.state-card-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 18px;
+}
+
+.state-card-name {
+  margin: 0 0 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.state-card-craft {
+  margin: 0 0 16px;
+  color: var(--states-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.state-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  color: var(--states-primary);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+/* Selected state products section */
+
+.state-products-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: states-fade-in 0.35s ease;
+}
+
+.state-products-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.states-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 15px;
+  border: 1px solid #e4d8c9;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--states-primary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.states-back-button:hover {
+  border-color: var(--states-primary);
+  background: #f7eee6;
+}
+
+.state-products-heading {
+  margin: 0 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 40px);
+}
+
+.state-products-description {
+  margin: 0;
+  color: var(--states-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Product cards within a selected state */
+
+.state-products-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.state-product-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #eadfd2;
+  border-radius: 15px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 5px 18px rgb(57 39 25 / 5%);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.state-product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgb(57 39 25 / 12%);
+}
+
+.state-product-image-wrapper {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: #f0e7dc;
+}
+
+.state-product-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.state-product-card:hover .state-product-image {
+  transform: scale(1.05);
+}
+
+/* Bestseller / popular craft highlight */
+
+.state-product-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 7px;
+  background: #f4dfae;
+  color: #633c13;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 8%);
+}
+
+.state-product-badge--bestseller {
+  background: var(--states-primary);
+  color: #fff;
+}
+
+.state-product-badge--popular {
+  background: #f4dfae;
+  color: #633c13;
+}
+
+.state-product-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 17px;
+}
+
+.state-product-name {
+  margin: 0 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.state-product-artisan {
+  margin: 0 0 12px;
+  color: var(--states-muted);
+  font-size: 12px;
+}
+
+.state-product-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.state-product-price {
+  color: var(--states-primary);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.state-product-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--states-primary);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+/* Empty search / empty products */
+
+.states-empty {
+  grid-column: 1 / -1;
+  padding: 48px 20px;
+  border: 1px dashed #d9c9b8;
+  border-radius: 14px;
+  color: var(--states-muted);
+  text-align: center;
+  line-height: 1.8;
+}
+
+/* Shared small helpers */
+
+.states-loading {
+  padding: 40px 20px;
+  color: var(--states-muted);
+  text-align: center;
+}
+
+.states-error {
+  padding: 18px;
+  border: 1px solid #e8b9b2;
+  border-radius: 12px;
+  background: #fff2f0;
+  color: #8d2f25;
+}
+
+@keyframes states-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tablet */
+
+@media (max-width: 1050px) {
+  .states-grid,
+  .state-products-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .states-page {
+    padding: 40px 4%;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+  .states-page {
+    padding: 30px 18px;
+  }
+
+  .states-grid,
+  .state-products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .state-card-content,
+  .state-product-content {
+    padding: 13px;
+  }
+
+  .state-card-name {
+    font-size: 18px;
+  }
+
+  .state-product-name {
+    font-size: 16px;
+  }
+
+  .state-product-price {
+    font-size: 15px;
+  }
+
+  .state-product-badge {
+    top: 8px;
+    left: 8px;
+    padding: 6px 7px;
+    font-size: 9px;
+  }
+
+  .state-products-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .states-description {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .states-grid,
+  .state-products-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-card,
+  .state-card-image,
+  .state-product-card,
+  .state-product-image {
+    transition: none;
+  }
+
+  .state-products-section {
+    animation: none;
+  }
+}
