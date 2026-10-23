@@ -1,0 +1,975 @@
+
+/* =========================================
+   VIRSA — ORDER TRACKING PAGE
+   Handmade & Made-to-Order Marketplace
+========================================= */
+
+.tracking-page {
+  --track-primary: #1769e8;
+  --track-primary-dark: #104fb5;
+  --track-green: #159c67;
+  --track-green-light: #e8f8f0;
+  --track-gold: #c49a52;
+  --track-ink: #172b4d;
+  --track-muted: #697b95;
+  --track-border: #e1eaf5;
+  --track-surface: #ffffff;
+  --track-background: #f5f8fc;
+
+  min-height: 100vh;
+  padding: 32px 5%;
+  background: var(--track-background);
+  color: var(--track-ink);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.tracking-page *,
+.tracking-page *::before,
+.tracking-page *::after {
+  box-sizing: border-box;
+}
+
+.tracking-page button,
+.tracking-page input,
+.tracking-page textarea {
+  font: inherit;
+}
+
+/* Main layout */
+
+.tracking-container {
+  width: 100%;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+
+.tracking-section {
+  margin-bottom: 24px;
+  padding: 26px;
+  border: 1px solid var(--track-border);
+  border-radius: 16px;
+  background: var(--track-surface);
+  box-shadow: 0 4px 18px rgb(23 43 77 / 3%);
+}
+
+.tracking-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.tracking-section-icon {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid #cfe0ff;
+  border-radius: 13px;
+  background: #edf4ff;
+  color: var(--track-primary);
+}
+
+.tracking-section-title {
+  margin: 0 0 6px;
+  font-size: 21px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.tracking-section-description {
+  margin: 0;
+  color: var(--track-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Order summary */
+
+.tracking-order-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 24px;
+  padding: 28px;
+  border: 1px solid var(--track-border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.tracking-order-id {
+  margin: 0 0 12px;
+  color: var(--track-muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.tracking-delivery-heading {
+  margin: 0 0 10px;
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.7px;
+}
+
+.tracking-delivery-subtitle {
+  margin: 0;
+  color: var(--track-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.tracking-creator {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+  padding-left: 26px;
+  border-left: 1px solid var(--track-border);
+}
+
+.tracking-creator-avatar {
+  display: grid;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf2f8;
+  color: var(--track-primary);
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.tracking-creator-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tracking-creator-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--track-muted);
+  font-size: 12px;
+}
+
+.tracking-creator-name {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.tracking-creator-rating {
+  color: #a76b00;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Order progress */
+
+.tracking-progress-section {
+  overflow: hidden;
+}
+
+.tracking-progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  padding-top: 8px;
+}
+
+.tracking-progress-step {
+  position: relative;
+  min-width: 0;
+  text-align: center;
+}
+
+.tracking-progress-track {
+  position: absolute;
+  z-index: 0;
+  top: 22px;
+  left: calc(50% + 25px);
+  width: calc(100% - 50px);
+  height: 4px;
+  border-radius: 99px;
+  background: #e2e8f0;
+}
+
+.tracking-progress-track.is-complete {
+  background: var(--track-green);
+}
+
+.tracking-progress-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  place-items: center;
+  border: 4px solid #e8edf4;
+  border-radius: 50%;
+  background: #98a6b9;
+  color: #fff;
+  font-size: 18px;
+}
+
+.tracking-progress-step.is-complete .tracking-progress-node {
+  border-color: #d6f5e5;
+  background: var(--track-green);
+}
+
+.tracking-progress-step.is-active .tracking-progress-node {
+  border-color: #c7f2dd;
+  background: var(--track-green);
+  box-shadow: 0 0 0 6px rgb(21 156 103 / 9%);
+  animation: tracking-pulse 2s infinite;
+}
+
+.tracking-progress-step.is-pending .tracking-progress-node {
+  border-color: #edf1f6;
+  background: #a1adbd;
+}
+
+.tracking-progress-label {
+  max-width: 190px;
+  margin: 0 auto 8px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.tracking-progress-date {
+  margin: 0 auto;
+  color: var(--track-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.tracking-progress-step.is-active .tracking-progress-date {
+  color: var(--track-green);
+  font-weight: 700;
+}
+
+/* Generic buttons */
+
+.tracking-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 12px 17px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.tracking-button:hover {
+  transform: translateY(-1px);
+}
+
+.tracking-button:focus-visible {
+  outline: 3px solid rgb(23 105 232 / 25%);
+  outline-offset: 3px;
+}
+
+.tracking-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.tracking-button-primary {
+  background: var(--track-primary);
+  color: #fff;
+}
+
+.tracking-button-primary:hover {
+  background: var(--track-primary-dark);
+}
+
+.tracking-button-secondary {
+  border-color: #d7e1ef;
+  background: #fff;
+  color: var(--track-ink);
+}
+
+.tracking-button-secondary:hover {
+  border-color: var(--track-primary);
+  background: #f5f8ff;
+}
+
+.tracking-button-success {
+  background: var(--track-green);
+  color: #fff;
+}
+
+.tracking-button-danger {
+  border-color: #f1c8c8;
+  background: #fff6f6;
+  color: #a52c2c;
+}
+
+.tracking-button-small {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* Seller workspace */
+
+.tracking-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+.tracking-workspace-card {
+  padding: 22px;
+  border: 1px solid #dce9fb;
+  border-radius: 13px;
+  background: #f7faff;
+}
+
+.tracking-workspace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tracking-workspace-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.tracking-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 99px;
+  background: var(--track-green-light);
+  color: #087b4b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.tracking-status-badge.is-pending {
+  background: #fff3dc;
+  color: #8b5b00;
+}
+
+.tracking-workspace-description {
+  margin: 0 0 18px;
+  color: var(--track-muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.tracking-workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Shipment evidence gallery */
+
+.tracking-evidence-section {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid #dce9fb;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.tracking-evidence-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tracking-evidence-title {
+  margin: 0 0 7px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.tracking-evidence-description {
+  max-width: 720px;
+  margin: 0;
+  color: var(--track-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.tracking-evidence-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 13px 15px;
+  border: 1px solid #cfe2ff;
+  border-radius: 10px;
+  background: #f0f6ff;
+  color: #214e8a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.tracking-evidence-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.tracking-evidence-item {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--track-border);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.tracking-evidence-image-wrapper {
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: #edf2f8;
+}
+
+.tracking-evidence-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tracking-evidence-caption {
+  padding: 12px;
+}
+
+.tracking-evidence-caption strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tracking-evidence-caption span {
+  color: var(--track-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.tracking-evidence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Evidence comparison / image preview modal */
+
+.tracking-modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 24px;
+  background: rgb(15 27 45 / 70%);
+}
+
+.tracking-modal {
+  width: min(100%, 760px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 25%);
+}
+
+.tracking-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.tracking-modal-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.tracking-modal-close {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--track-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--track-ink);
+  cursor: pointer;
+}
+
+.tracking-modal-image {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  border-radius: 10px;
+  background: #f1f4f8;
+  object-fit: contain;
+}
+
+/* Shipment information */
+
+.tracking-shipment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tracking-shipment-item {
+  padding: 17px;
+  border: 1px solid var(--track-border);
+  border-radius: 11px;
+  background: #fbfdff;
+}
+
+.tracking-shipment-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--track-muted);
+  font-size: 12px;
+}
+
+.tracking-shipment-value {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.6;
+}
+
+.tracking-shipment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Activity timeline */
+
+.tracking-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 0 0;
+}
+
+.tracking-timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 100px;
+}
+
+.tracking-timeline-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.tracking-timeline-rail::after {
+  position: absolute;
+  top: 40px;
+  bottom: -1px;
+  width: 3px;
+  border-radius: 99px;
+  background: #e2e8f0;
+  content: "";
+}
+
+.tracking-timeline-item.is-complete .tracking-timeline-rail::after {
+  background: var(--track-green);
+}
+
+.tracking-timeline-item:last-child .tracking-timeline-rail::after {
+  display: none;
+}
+
+.tracking-timeline-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 3px solid #e6edf5;
+  border-radius: 50%;
+  background: #a3afbf;
+  color: #fff;
+  font-size: 14px;
+}
+
+.tracking-timeline-item.is-complete .tracking-timeline-node {
+  border-color: #d8f5e7;
+  background: var(--track-green);
+}
+
+.tracking-timeline-content {
+  padding: 2px 0 25px;
+}
+
+.tracking-timeline-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.tracking-timeline-description {
+  margin: 0 0 7px;
+  color: var(--track-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tracking-timeline-date {
+  color: var(--track-muted);
+  font-size: 11px;
+}
+
+/* Payment protection */
+
+.tracking-protection {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid #d6e7ff;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #eef6ff, #f9fbff);
+}
+
+.tracking-protection-icon {
+  display: grid;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--track-primary);
+  color: #fff;
+}
+
+.tracking-protection-title {
+  margin: 0 0 7px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.tracking-protection-description {
+  margin: 0;
+  color: #4d6585;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* Forms used for report issue / messaging */
+
+.tracking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tracking-form-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.tracking-form-input,
+.tracking-form-textarea,
+.tracking-form-select {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d7e1ef;
+  border-radius: 9px;
+  outline: none;
+  background: #fff;
+  color: var(--track-ink);
+  font-size: 14px;
+}
+
+.tracking-form-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.tracking-form-input:focus,
+.tracking-form-textarea:focus,
+.tracking-form-select:focus {
+  border-color: var(--track-primary);
+  box-shadow: 0 0 0 3px rgb(23 105 232 / 10%);
+}
+
+.tracking-form-help {
+  display: block;
+  margin-top: 6px;
+  color: var(--track-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* Empty and error states */
+
+.tracking-empty {
+  padding: 28px 18px;
+  border: 1px dashed #cbd8e8;
+  border-radius: 12px;
+  background: #fbfdff;
+  color: var(--track-muted);
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.tracking-error {
+  padding: 14px 16px;
+  border: 1px solid #f1c5c5;
+  border-radius: 10px;
+  background: #fff4f4;
+  color: #a52c2c;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tracking-success {
+  padding: 14px 16px;
+  border: 1px solid #c7ead7;
+  border-radius: 10px;
+  background: #effbf4;
+  color: #087b4b;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* Animations */
+
+@keyframes tracking-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(21 156 103 / 25%);
+  }
+
+  70% {
+    box-shadow: 0 0 0 9px rgb(21 156 103 / 0%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(21 156 103 / 0%);
+  }
+}
+
+/* Tablet */
+
+@media (max-width: 1000px) {
+  .tracking-page {
+    padding: 24px 4%;
+  }
+
+  .tracking-order-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-creator {
+    padding: 18px 0 0;
+    border-top: 1px solid var(--track-border);
+    border-left: 0;
+  }
+
+  .tracking-evidence-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tracking-shipment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 650px) {
+  .tracking-page {
+    padding: 16px 12px;
+  }
+
+  .tracking-section {
+    margin-bottom: 16px;
+    padding: 18px 14px;
+    border-radius: 13px;
+  }
+
+  .tracking-order-summary {
+    gap: 20px;
+    padding: 20px 16px;
+  }
+
+  .tracking-delivery-heading {
+    font-size: 26px;
+  }
+
+  .tracking-progress {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-left: 0;
+  }
+
+  .tracking-progress-step {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 14px;
+    min-height: 92px;
+    text-align: left;
+  }
+
+  .tracking-progress-track {
+    top: 48px;
+    left: 22px;
+    width: 4px;
+    height: calc(100% - 48px);
+  }
+
+  .tracking-progress-node {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    margin: 0;
+  }
+
+  .tracking-progress-label {
+    max-width: none;
+    margin: 3px 0 5px;
+    font-size: 13px;
+  }
+
+  .tracking-progress-date {
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .tracking-section-title {
+    font-size: 18px;
+  }
+
+  .tracking-workspace-card,
+  .tracking-evidence-section {
+    padding: 16px 13px;
+  }
+
+  .tracking-evidence-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .tracking-evidence-caption {
+    padding: 9px;
+  }
+
+  .tracking-evidence-caption strong {
+    font-size: 11px;
+  }
+
+  .tracking-shipment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-workspace-actions,
+  .tracking-evidence-actions,
+  .tracking-shipment-actions {
+    flex-direction: column;
+  }
+
+  .tracking-workspace-actions .tracking-button,
+  .tracking-evidence-actions .tracking-button,
+  .tracking-shipment-actions .tracking-button {
+    width: 100%;
+  }
+
+  .tracking-timeline-item {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 105px;
+  }
+
+  .tracking-timeline-node {
+    width: 34px;
+    height: 34px;
+  }
+
+  .tracking-timeline-rail::after {
+    top: 36px;
+  }
+
+  .tracking-protection {
+    gap: 12px;
+    padding: 16px 13px;
+  }
+
+  .tracking-protection-icon {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .tracking-modal-backdrop {
+    padding: 12px;
+  }
+
+  .tracking-modal {
+    padding: 18px 14px;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .tracking-page *,
+  .tracking-page *::before,
+  .tracking-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
