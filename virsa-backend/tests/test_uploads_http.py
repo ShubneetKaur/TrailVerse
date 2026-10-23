@@ -1,3 +1,5 @@
+API_PREFIX = "/api/v1"
+
 from io import BytesIO
 from unittest.mock import patch
 
@@ -9,13 +11,13 @@ from app.models.seller_application import SellerApplication
 
 def register_and_login(client, name, email, password="password123"):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={"name": name, "email": email, "password": password},
     )
     assert response.status_code == 201
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert response.status_code == 200
@@ -54,7 +56,7 @@ def make_png():
 def upload(client, headers, content, filename="test.png",
            content_type="image/png"):
     return client.post(
-        "/uploads/artwork-image",
+        f"{API_PREFIX}/uploads/artwork-image",
         headers=headers,
         files={"file": (filename, content, content_type)},
     )

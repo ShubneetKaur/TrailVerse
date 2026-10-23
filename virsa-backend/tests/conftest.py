@@ -12,6 +12,8 @@ from app.dependencies import get_db
 from app.models.user import User  # noqa: F401
 from app.models.seller_application import SellerApplication  # noqa: F401
 from app.models.artwork import Artwork  # noqa: F401
+from app.models.cart import Cart, CartItem  # noqa: F401
+from app.models.order import Order, OrderItem  # noqa: F401
 
 
 @pytest.fixture

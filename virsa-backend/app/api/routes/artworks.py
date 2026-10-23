@@ -32,6 +32,7 @@ def create_artwork(
         title=payload.title.strip(),
         description=payload.description.strip(),
         price=payload.price,
+        stock_quantity=payload.stock_quantity,
         category=payload.category.strip(),
         state=payload.state.strip(),
         image_url=payload.image_url.strip(),
