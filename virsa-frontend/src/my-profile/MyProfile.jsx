@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,14 +25,13 @@ import {
   ShoppingBag,
   ShoppingCart,
   Sparkles,
-  Star,
   Trash2,
   Truck,
   UserRound,
-  Wallet,
   X,
 } from "lucide-react";
 import "./MyProfile.css";
+import { readOrders } from "../orders/orderStorage";
 
 const starterProducts = [
   {
@@ -214,7 +213,7 @@ function ProductCard({ product, onAddToCart, onToggleWishlist, saved }) {
   );
 }
 
-export default function MyProfile({ onBack, onSignOut }) {
+export default function MyProfile({ onBack, onSignOut, onTrackOrder }) {
   const [activeSection, setActiveSection] = useState("overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -241,10 +240,26 @@ export default function MyProfile({ onBack, onSignOut }) {
     "virsa-addresses",
     []
   );
-  const [orders] = useState(() =>
-    readStorage("virsa-demo-orders", starterOrders)
-  );
-  const [recentlyViewed, setRecentlyViewed] = usePersistentState(
+  const [orders] = useState(() => {
+    const marketplaceOrders = readOrders().map((order) => ({
+      id: order.reference,
+      reference: order.reference,
+      name: order.product?.name || "Demo order",
+      artisan: order.product?.artisan || "Artisan details unavailable",
+      price: order.totalCents / 100,
+      date: order.createdAt
+        ? new Date(order.createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })
+        : "Date unavailable",
+      status: order.disputeStatus === "under_review"
+        ? "Under review · demo"
+        : order.deliveryStatus === "delivered"
+          ? "Delivered · demo"
+          : "Demo order placed",
+      image: order.product?.image || "",
+    }));
+    return [...marketplaceOrders, ...readStorage("virsa-demo-orders", starterOrders)];
+  });
+  const [recentlyViewed] = usePersistentState(
     "virsa-recently-viewed",
     starterProducts
   );
@@ -720,7 +735,12 @@ export default function MyProfile({ onBack, onSignOut }) {
                   {order.status === "Delivered" ? <Check size={12} /> : <Truck size={12} />}
                   {order.status}
                 </span>
-                <button className="mp-small-link" onClick={() => showNotice(`Order ${order.id}: ${order.status} (demo)`)}>
+                <button
+                  className="mp-small-link"
+                  onClick={() => order.reference && onTrackOrder
+                    ? onTrackOrder(order.reference)
+                    : showNotice(`Order ${order.id}: ${order.status} (sample history)`)}
+                >
                   Track order
                 </button>
               </div>

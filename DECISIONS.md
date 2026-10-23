@@ -80,6 +80,8 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-016** | Seller Verification Applications | `Implemented` | Seller Verification & Database |
 | **ADR-017** | Seller Role Promotion on Approval | `Implemented` | Seller Verification & Authorization |
 | **ADR-018** | Explicit Vite Development CORS Origin | `Implemented` | API & Security |
+| **ADR-019** | Reuse the Custom Art Studio in the VIRSA Frontend | `Implemented` | Frontend |
+| **ADR-020** | Frontend-Only Demo Checkout and Order Tracking | `Implemented` | Frontend |
 
 ---
 
@@ -480,6 +482,44 @@ Configure FastAPI's `CORSMiddleware` to allow only `http://localhost:5173`, the 
 - **Benefits:** Enables the local Vite frontend to call the API while restricting browser access to a single known development origin and the API's required methods and headers.
 - **Trade-offs / Risks:** Other frontend origins, including alternate hostnames or ports and production origins, must be explicitly configured when introduced.
 - **Alternatives Considered:** Allowing every origin was rejected because it is unnecessarily broad; configuring production origins is deferred until a production frontend origin is known.
+
+---
+
+## ADR-019: Reuse the Custom Art Studio in the VIRSA Frontend
+
+- **Date:** 2026-10-23
+- **Status:** `Implemented`
+- **Components:** Frontend
+
+### Context
+The custom art studio was provided as a nested Vite application with an exported React page component, its own DOM mount, and a 3D preview. The main VIRSA app already uses conditional React rendering for navigation.
+
+### Decision
+Render the studio's existing React component directly from the VIRSA app's page switch. Keep its existing UI and behavior, scope its styles to the studio wrapper, and add only the `@react-three/fiber`, `@react-three/drei`, and `three` runtime dependencies required by its preview. The standalone Vite entry remains unused by the main app.
+
+### Consequences & Rationale
+- **Benefits:** Reuses the existing studio without duplicating the app, replacing frontend configuration, or adding a routing framework.
+- **Trade-offs / Risks:** The live 3D preview requires WebGL; reference images load remotely. An art-brief API remains optional and must be configured separately to submit briefs to a server.
+- **Alternatives Considered:** Embedding a separately built studio in an iframe was rejected because it would retain a second application runtime and complicate navigation and deployment.
+
+---
+
+## ADR-020: Frontend-Only Demo Checkout and Order Tracking
+
+- **Date:** 2026-10-23
+- **Status:** `Implemented`
+- **Components:** Frontend
+
+### Context
+The frontend has product details and profile order history, but the backend exposes no order, payment, escrow, or shipment APIs. The marketplace needs a coherent prototype flow without implying real transactions.
+
+### Decision
+Use the existing conditional React navigation with query-addressable checkout, confirmation, product-return, and tracking views. Persist only product/order snapshots and simulated workflow events in browser storage; keep delivery form values in memory and do not request or store payment credentials. Label the 15/85 payout model and all workflow actions as simulations.
+
+### Consequences & Rationale
+- **Benefits:** Supports refreshable demo checkout and tracking without introducing a router, payment dependency, or backend schema unsupported by the current project.
+- **Trade-offs / Risks:** Browser storage is not secure or account-scoped. No payment, escrow, payout, dispute resolution, or live shipment is implemented; production use requires suitable backend and provider integrations.
+- **Alternatives Considered:** Treating demo state as real order/payment status was rejected as misleading; adding an order backend is deferred until a real provider and business rules are selected.
 
 ---
 

@@ -1,6 +1,6 @@
 
-import React, { useMemo, useState } from "react";
-import "./Product.css";
+import { useMemo, useState } from "react";
+import "./product.css";
 
 const products = [
   {
@@ -188,10 +188,18 @@ function ProductStars({ rating }) {
   );
 }
 
-export default function Product() {
-  const [selectedProductId, setSelectedProductId] = useState(products[0].id);
+export default function Product({
+  initialProduct,
+  initialQuantity = 1,
+  onBackToState,
+  onBackToHome,
+  onBuyNow,
+}) {
+  const [selectedProductId, setSelectedProductId] = useState(
+    initialProduct?.id || products[0].id
+  );
   const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(Math.max(1, initialQuantity));
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState("Standard");
@@ -204,8 +212,38 @@ export default function Product() {
   const [zoomOpen, setZoomOpen] = useState(false);
 
   const product = useMemo(
-    () => products.find((item) => item.id === selectedProductId) || products[0],
-    [selectedProductId]
+    () => {
+      const catalogProduct = products.find((item) => item.id === selectedProductId);
+      if (catalogProduct) return catalogProduct;
+      if (!initialProduct) return products[0];
+
+      const price = Number(initialProduct.price ?? initialProduct.unitPriceCents / 100) || 0;
+      const images = initialProduct.images?.length
+        ? initialProduct.images
+        : [initialProduct.image || products[0].images[0]];
+
+      return {
+        ...products[0],
+        ...initialProduct,
+        id: selectedProductId,
+        price,
+        originalPrice: initialProduct.originalPrice ?? price,
+        discount: initialProduct.discount || "",
+        stock: initialProduct.stock ?? 99,
+        stockKnown: initialProduct.stock != null,
+        rating: initialProduct.rating ?? 0,
+        reviewCount: initialProduct.reviewCount ?? 0,
+        subtitle: initialProduct.subtitle || initialProduct.description || "",
+        description: initialProduct.description || initialProduct.subtitle || "",
+        craft: initialProduct.craft || initialProduct.category || "Handcrafted tradition",
+        category: initialProduct.category || initialProduct.craft || "Handcrafted craft",
+        state: initialProduct.state || initialProduct.origin || "India",
+        artisan: initialProduct.artisan || initialProduct.storeName || "VIRSA artisan",
+        artisanLocation: initialProduct.artisanLocation || initialProduct.state || initialProduct.origin || "India",
+        images,
+      };
+    },
+    [selectedProductId, initialProduct]
   );
 
   const isWishlisted = wishlist.includes(product.id);
@@ -215,6 +253,20 @@ export default function Product() {
     setToast(message);
     window.clearTimeout(showToast.timeout);
     showToast.timeout = window.setTimeout(() => setToast(""), 2800);
+  };
+
+  const handleBack = () => {
+    if (onBackToState) {
+      onBackToState();
+      return;
+    }
+
+    if (onBackToHome) {
+      onBackToHome();
+      return;
+    }
+
+    window.history.back();
   };
 
   const selectProduct = (nextProduct) => {
@@ -236,7 +288,7 @@ export default function Product() {
   };
 
   const addToCart = (item, amount = quantity) => {
-    if (item.stock < 1) {
+    if (item.stockKnown !== false && item.stock < 1) {
       showToast("Sorry, this product is currently out of stock.");
       return;
     }
@@ -249,7 +301,7 @@ export default function Product() {
           entry.id === item.id
             ? {
                 ...entry,
-                quantity: Math.min(entry.quantity + amount, item.stock),
+                quantity: Math.min(entry.quantity + amount, item.stockKnown === false ? 99 : item.stock),
               }
             : entry
         );
@@ -262,7 +314,7 @@ export default function Product() {
           name: item.name,
           price: item.price,
           image: item.images[0],
-          quantity: Math.min(amount, item.stock),
+          quantity: Math.min(amount, item.stockKnown === false ? 99 : item.stock),
         },
       ];
     });
@@ -285,13 +337,17 @@ export default function Product() {
   };
 
   const buyNow = () => {
-    if (product.stock < 1) {
+    if (product.stockKnown !== false && product.stock < 1) {
       showToast("This product is currently out of stock.");
       return;
     }
 
-    addToCart(product, quantity);
-    showToast("Product added. Connect your checkout page to continue.");
+    if (onBuyNow) {
+      onBuyNow(product, quantity);
+      return;
+    }
+
+    showToast("Checkout is unavailable until the marketplace integration is loaded.");
   };
 
   const checkDelivery = (event) => {
@@ -458,6 +514,10 @@ export default function Product() {
       <main>
         <div className="product-container">
           <nav className="product-breadcrumb" aria-label="Breadcrumb">
+            <button type="button" className="product-back-link" onClick={handleBack}>
+              ← Back to {onBackToState ? "state" : "marketplace"}
+            </button>
+            <span className="product-breadcrumb-separator">/</span>
             <a href="/">Home</a>
             <span className="product-breadcrumb-separator">/</span>
             <a href="/">Handicrafts</a>
@@ -574,9 +634,11 @@ export default function Product() {
 
               <div className="product-stock-status">
                 <span className="product-stock-dot" />
-                {product.stock > 0
-                  ? `In stock · ${product.stock} available in demo inventory`
-                  : "Currently out of stock"}
+                {product.stockKnown === false
+                  ? "Availability has not been confirmed"
+                  : product.stock > 0
+                    ? `In stock · ${product.stock} available in demo inventory`
+                    : "Currently out of stock"}
               </div>
 
               <hr className="product-divider" />
@@ -640,11 +702,11 @@ export default function Product() {
                     type="button"
                     onClick={() =>
                       setQuantity((value) =>
-                        Math.min(product.stock, value + 1)
+                        Math.min(product.stockKnown === false ? 99 : product.stock, value + 1)
                       )
                     }
                     aria-label="Increase quantity"
-                    disabled={quantity >= product.stock}
+                    disabled={product.stockKnown !== false && quantity >= product.stock}
                   >
                     <Icon name="plus" size={15} />
                   </button>
@@ -655,7 +717,7 @@ export default function Product() {
                 <button
                   className="product-button product-button-primary"
                   type="button"
-                  disabled={product.stock < 1}
+                  disabled={product.stockKnown !== false && product.stock < 1}
                   onClick={() => addToCart(product)}
                 >
                   <Icon name="cart" size={17} />
@@ -665,7 +727,7 @@ export default function Product() {
                 <button
                   className="product-button product-button-gold"
                   type="button"
-                  disabled={product.stock < 1}
+                  disabled={product.stockKnown !== false && product.stock < 1}
                   onClick={buyNow}
                 >
                   Buy Now

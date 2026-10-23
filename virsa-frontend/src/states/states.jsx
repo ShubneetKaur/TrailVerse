@@ -1,6 +1,7 @@
 
-import React, { useMemo, useState } from "react";
-import "./States.css";
+import React, { useEffect, useMemo, useState } from "react";
+import phulkariStoreImage from "../assets/phulkari-store.jpeg";
+import "./states.css";
 
 // Images and sample product data are demo content.
 // Replace with backend API data when it becomes available.
@@ -212,8 +213,7 @@ const PRODUCTS = [
     badgeType: "bestseller",
     description:
       "A colourful Phulkari-inspired dupatta celebrating Punjabi embroidery.",
-    image:
-      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=900&q=80",
+    image: phulkariStoreImage,
   },
   {
     id: "punjab-embroidered",
@@ -423,9 +423,13 @@ function ProductCard({ product, onSelect }) {
   );
 }
 
-export default function States({ onProductSelect }) {
+export default function States({ onProductSelect, initialState, onBackToHome }) {
   const [search, setSearch] = useState("");
-  const [selectedState, setSelectedState] = useState(null);
+  const [selectedState, setSelectedState] = useState(initialState ?? null);
+
+  useEffect(() => {
+    setSelectedState(initialState ?? null);
+  }, [initialState]);
 
   const allStates = useMemo(
     () => [
@@ -459,6 +463,15 @@ export default function States({ onProductSelect }) {
         : [],
     [selectedState]
   );
+
+  function handleBackToAllStates() {
+    if (onBackToHome) {
+      onBackToHome();
+      return;
+    }
+
+    setSelectedState(null);
+  }
 
   function handleProductSelect(product) {
     // If the parent provides navigation, use it.
@@ -529,9 +542,9 @@ export default function States({ onProductSelect }) {
             <button
               type="button"
               className="states-back-button"
-              onClick={() => setSelectedState(null)}
+              onClick={handleBackToAllStates}
             >
-              <ArrowLeft /> All states
+              <ArrowLeft /> {onBackToHome ? "Back to marketplace" : "All states"}
             </button>
           </div>
 

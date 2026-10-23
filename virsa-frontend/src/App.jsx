@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import "./App.css";
 import brideImage from "./assets/bride.png";
 import handi1 from "./assets/handi 1.jpg";
@@ -9,9 +9,62 @@ import punjabImage from "./assets/punjab.jpg";
 import rajasthanImage from "./assets/rajasthan.jfif";
 import kashmirImage from "./assets/kashmir.jfif";
 import gujaratImage from "./assets/gujarat.jfif";
+import phukariImage from "./assets/phukari.png";
+import bluePotteryImage from "./assets/blue pottery.png";
+import pashminaImage from "./assets/pashmina.png";
 import SellerDashboard from "./seller-dashboard/SellerDashboard";
 import MyProfile from "./my-profile/MyProfile";
 import AdminPanel from "./admin-panel/AdminPanel";
+import States from "./states/states";
+import Product from "./product/product";
+import {
+  CHECKOUT_DRAFT_KEY,
+  createOrderReference,
+  findOrder,
+  normalizeProduct,
+  saveOrder,
+} from "./orders/orderStorage";
+import {
+  CheckoutPage,
+  ConfirmationPage,
+  TrackingPage,
+} from "./orders/OrderExperience";
+
+const CustomArtStudio = lazy(() => import("./virsa-custom-art-studio/src/App"));
+
+function readOrderRoute() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("checkout")) return { type: "checkout" };
+  if (params.has("confirmation")) return { type: "confirmation", reference: params.get("confirmation") };
+  if (params.has("track")) return { type: "tracking", reference: params.get("track") };
+  if (params.has("product")) return { type: "product" };
+  return { type: "marketplace" };
+}
+
+function readCheckoutDraft() {
+  try {
+    const stored = sessionStorage.getItem(CHECKOUT_DRAFT_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readDemoSession() {
+  try {
+    return sessionStorage.getItem("virsa-demo-session") === "signed-in";
+  } catch {
+    return false;
+  }
+}
+
+function writeCheckoutDraft(draft) {
+  try {
+    sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    return;
+  }
+}
 
 const heroGalleryFrames = [
   {
@@ -98,6 +151,7 @@ const highlightedStores = [
     description: "Colourful threads, generations of tradition.",
     initials: "NP",
     className: "highlight-phulkari",
+    image: phukariImage,
   },
   {
     name: "The Royal Loom",
@@ -105,6 +159,7 @@ const highlightedStores = [
     description: "Timeless textiles made with care.",
     initials: "RL",
     className: "highlight-loom",
+    image: bluePotteryImage,
   },
   {
     name: "Kashmir Heritage",
@@ -112,13 +167,106 @@ const highlightedStores = [
     description: "Craftsmanship shaped by generations.",
     initials: "KH",
     className: "highlight-kashmir",
+    image: pashminaImage,
+  },
+];
+
+const customOptions = [
+  {
+    title: "Personalised Embroidery",
+    description:
+      "Customise traditional embroidery, motifs, colours, and designs.",
+    icon: "✦",
+  },
+  {
+    title: "Made Just for You",
+    description:
+      "Explore customised handcrafted pieces tailored to your preferences.",
+    icon: "❋",
+  },
+  {
+    title: "Create Your Own",
+    description:
+      "Share your ideas and explore bespoke creations from skilled artisans.",
+    icon: "✧",
   },
 ];
 
 function App() {
   const [isLogin, setIsLogin] = useState(true);
-  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(readDemoSession);
   const [formError, setFormError] = useState("");
+  const [orderRoute, setOrderRoute] = useState(readOrderRoute);
+  const [checkoutDraft, setCheckoutDraft] = useState(readCheckoutDraft);
+  const [currentOrder, setCurrentOrder] = useState(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setOrderRoute(readOrderRoute());
+      setCheckoutDraft(readCheckoutDraft());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigateOrderRoute = (route, reference) => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    if (route === "checkout") url.searchParams.set("checkout", "1");
+    if (route === "product") url.searchParams.set("product", "1");
+    if (route === "confirmation") url.searchParams.set("confirmation", reference);
+    if (route === "tracking") url.searchParams.set("track", reference);
+    window.history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    setOrderRoute({ type: route, reference });
+  };
+
+  const startCheckout = (product, quantity) => {
+    const draft = { product: normalizeProduct(product), quantity: Math.max(1, quantity || 1) };
+    try {
+      sessionStorage.setItem("virsa-demo-session", "signed-in");
+    } catch {
+      // The active tab can still continue if session storage is unavailable.
+    }
+    setCheckoutDraft(draft);
+    writeCheckoutDraft(draft);
+    navigateOrderRoute("checkout");
+  };
+
+  const returnToMarketplace = () => {
+    try {
+      sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
+    } catch {
+      // Clear the in-memory draft even when browser storage is unavailable.
+    }
+    setCheckoutDraft(null);
+    setCurrentOrder(null);
+    navigateOrderRoute("marketplace");
+  };
+
+  const createDemoOrder = ({ quantity, paymentMethod }) => {
+    if (!checkoutDraft?.product) return;
+    const createdAt = new Date().toISOString();
+    const totalCents = checkoutDraft.product.unitPriceCents * quantity;
+    const order = {
+      reference: createOrderReference(),
+      product: checkoutDraft.product,
+      quantity,
+      totalCents,
+      currency: "INR",
+      paymentMethod,
+      paymentStatus: "not_processed_demo",
+      buyerApproval: "pending",
+      disputeStatus: "none",
+      deliveryStatus: null,
+      createdAt,
+      events: [{ type: "order_placed", label: "Demo order created", at: createdAt }],
+    };
+    if (!saveOrder(order)) {
+      throw new Error("Browser storage is unavailable");
+    }
+    setCurrentOrder(order);
+    navigateOrderRoute("confirmation", order.reference);
+  };
 
   const [formData, setFormData] = useState({
     username: "",
@@ -163,6 +311,11 @@ function App() {
   };
 
   const handleSignOut = () => {
+    try {
+      sessionStorage.removeItem("virsa-demo-session");
+    } catch {
+      // Sign-out still clears the current app state.
+    }
     setIsSignedIn(false);
     setIsLogin(true);
     setFormData({
@@ -174,12 +327,87 @@ function App() {
     setFormError("");
   };
 
+  if (orderRoute.type === "checkout") {
+    return (
+      <CheckoutPage
+        draft={checkoutDraft}
+        onBackToProduct={() => navigateOrderRoute("product")}
+        onReturnToMarketplace={returnToMarketplace}
+        onDraftQuantityChange={(quantity) => {
+          const draft = { ...checkoutDraft, quantity };
+          setCheckoutDraft(draft);
+          writeCheckoutDraft(draft);
+        }}
+        onPlaceOrder={createDemoOrder}
+      />
+    );
+  }
+
+  if (orderRoute.type === "product") {
+    return checkoutDraft?.product ? (
+      <Product
+        key={checkoutDraft.product.id}
+        initialProduct={{ ...checkoutDraft.product, price: checkoutDraft.product.unitPriceCents / 100 }}
+        initialQuantity={checkoutDraft.quantity}
+        onBuyNow={startCheckout}
+        onBackToHome={returnToMarketplace}
+      />
+    ) : (
+      <CheckoutPage onReturnToMarketplace={returnToMarketplace} />
+    );
+  }
+
+  if (orderRoute.type === "confirmation") {
+    const order = findOrder(orderRoute.reference) ||
+      (currentOrder?.reference === orderRoute.reference ? currentOrder : null);
+    return (
+      <ConfirmationPage
+        order={order}
+        onTrackOrder={() => navigateOrderRoute("tracking", orderRoute.reference)}
+        onViewProduct={() => {
+          if (order) {
+            const draft = { product: order.product, quantity: order.quantity };
+            setCheckoutDraft(draft);
+            writeCheckoutDraft(draft);
+            navigateOrderRoute("product");
+          }
+        }}
+        onReturnToMarketplace={returnToMarketplace}
+      />
+    );
+  }
+
+  if (orderRoute.type === "tracking") {
+    return (
+      <TrackingPage
+        key={orderRoute.reference}
+        reference={orderRoute.reference}
+        onReturnToMarketplace={returnToMarketplace}
+        onViewProduct={() => {
+          const order = findOrder(orderRoute.reference);
+          if (order) {
+            const draft = { product: order.product, quantity: order.quantity };
+            setCheckoutDraft(draft);
+            writeCheckoutDraft(draft);
+            navigateOrderRoute("product");
+          }
+        }}
+      />
+    );
+  }
+
   if (isSignedIn) {
-    return <HomePage onSignOut={handleSignOut} />;
+    return (
+      <HomePage
+        onSignOut={handleSignOut}
+        onBuyNow={startCheckout}
+        onTrackOrder={(reference) => navigateOrderRoute("tracking", reference)}
+      />
+    );
   }
 
   return (
-    <main className={isLogin ? "auth-page login-page" : "auth-page"}>
+    <main className={isLogin ? "auth-page login-page" : "auth-page create-account-page"}>
       <div className="painting painting-left" aria-hidden="true">
         <img src={brideImage} alt="" />
       </div>
@@ -334,11 +562,13 @@ function App() {
   );
 }
 
-function HomePage({ onSignOut }) {
+function HomePage({ onSignOut, onBuyNow, onTrackOrder }) {
   const [activeMenu, setActiveMenu] = useState(false);
   const [dashboardMessage, setDashboardMessage] = useState(false);
   const [activePanel, setActivePanel] = useState("");
   const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [selectedState, setSelectedState] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const stateTrackRef = useRef(null);
 
   useEffect(() => {
@@ -391,6 +621,42 @@ function HomePage({ onSignOut }) {
       <MyProfile
         onBack={() => setDashboardMessage(false)}
         onSignOut={onSignOut}
+        onTrackOrder={onTrackOrder}
+      />
+    );
+  }
+
+  if (activePanel === "Custom Art Studio") {
+    return (
+      <Suspense fallback={<div className="studio-loading">Loading Custom Art Studio...</div>}>
+        <CustomArtStudio onBackToHome={() => setActivePanel("")} />
+      </Suspense>
+    );
+  }
+
+  if (selectedProduct) {
+    return (
+      <Product
+        key={selectedProduct.id}
+        initialProduct={selectedProduct}
+        onBackToState={() => setSelectedProduct(null)}
+        onBackToHome={() => {
+          setSelectedProduct(null);
+          setSelectedState(null);
+        }}
+        onBuyNow={onBuyNow}
+      />
+    );
+  }
+
+  if (selectedState) {
+    return (
+      <States
+        initialState={selectedState}
+        onBackToHome={() => setSelectedState(null)}
+        onProductSelect={(product) => {
+          setSelectedProduct(product);
+        }}
       />
     );
   }
@@ -649,12 +915,14 @@ function HomePage({ onSignOut }) {
 
         <div className="state-track" ref={stateTrackRef}>
           {states.map((state, index) => (
-            <a
+            <button
+              type="button"
               className={`state-card state-card-${index % 3} ${
                 state.image ? "has-image" : "is-placeholder"
               }`}
-              href="#artisans"
               key={state.name}
+              onClick={() => setSelectedState(state.name)}
+              aria-label={`Explore ${state.name} crafts`}
               style={{ "--state-accent": state.accentColor }}
             >
               {state.image ? (
@@ -682,13 +950,53 @@ function HomePage({ onSignOut }) {
                   ↗
                 </span>
               </div>
-            </a>
+            </button>
           ))}
         </div>
 
         <p className="carousel-hint">
           <span>←</span> Explore more regions <span>→</span>
         </p>
+      </section>
+
+      <section className="custom-crafts-banner reveal-on-scroll" id="explore-custom">
+        <div className="custom-crafts-ornament" aria-hidden="true">
+          ✦
+        </div>
+
+        <div className="custom-crafts-copy">
+          <p className="home-eyebrow">Explore Custom</p>
+          <h2>
+            Explore <em>Custom</em>
+          </h2>
+          <p>
+            Your vision, our artisans&apos; craft. Discover handcrafted treasures made uniquely for you.
+          </p>
+
+          <div className="custom-crafts-options">
+            {customOptions.map((option) => (
+              <article className="custom-option-card" key={option.title}>
+                <span className="custom-option-icon" aria-hidden="true">
+                  {option.icon}
+                </span>
+                <h3>{option.title}</h3>
+                <p>{option.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="custom-crafts-button"
+          onClick={() => setActivePanel("Custom Art Studio")}
+        >
+          Create Something Unique <span aria-hidden="true">↗</span>
+        </button>
+
+        <span className="custom-crafts-watermark" aria-hidden="true">
+          विरसा
+        </span>
       </section>
 
       <section className="highlights-section reveal-on-scroll" id="highlights">
@@ -710,6 +1018,12 @@ function HomePage({ onSignOut }) {
           {highlightedStores.map((store, index) => (
             <article className="highlight-card" key={store.name}>
               <div className={`highlight-image ${store.className}`}>
+                <img
+                  src={store.image}
+                  alt={store.name}
+                  className="highlight-card-photo"
+                />
+                <div className="highlight-image-overlay" aria-hidden="true" />
                 <span className="highlight-pattern" aria-hidden="true">
                   {index === 0 ? "✳" : index === 1 ? "❋" : "✧"}
                 </span>

@@ -201,6 +201,20 @@
   font-size: 11px;
 }
 
+.product-back-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--product-burgundy);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.product-back-link:hover {
+  color: var(--product-gold);
+}
+
 .product-breadcrumb a:hover {
   color: var(--product-burgundy);
 }
