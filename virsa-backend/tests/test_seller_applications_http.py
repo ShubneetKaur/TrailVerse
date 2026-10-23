@@ -1,6 +1,8 @@
+API_PREFIX = "/api/v1"
+
 def register_and_login(client, name, email, password="password123"):
     register_response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": name,
             "email": email,
@@ -10,7 +12,7 @@ def register_and_login(client, name, email, password="password123"):
     assert register_response.status_code == 201
 
     login_response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert login_response.status_code == 200
@@ -21,7 +23,7 @@ def register_and_login(client, name, email, password="password123"):
 
 def create_application(client, headers):
     return client.post(
-        "/seller-applications",
+        f"{API_PREFIX}/seller-applications",
         headers=headers,
         json={
             "business_name": "Heritage Studio",
@@ -68,7 +70,7 @@ def test_customer_can_submit_and_view_own_application(client):
     assert application["business_name"] == "Heritage Studio"
 
     mine_response = client.get(
-        "/seller-applications/mine",
+        f"{API_PREFIX}/seller-applications/mine",
         headers=headers,
     )
 
@@ -79,7 +81,7 @@ def test_customer_can_submit_and_view_own_application(client):
 
 def test_unauthenticated_user_cannot_submit_application(client):
     response = client.post(
-        "/seller-applications",
+        f"{API_PREFIX}/seller-applications",
         json={
             "business_name": "Heritage Studio",
             "description": (
@@ -98,7 +100,7 @@ def test_customer_cannot_list_all_applications(client):
     )
 
     response = client.get(
-        "/seller-applications",
+        f"{API_PREFIX}/seller-applications",
         headers=headers,
     )
 
@@ -114,7 +116,7 @@ def test_customer_cannot_view_another_users_application(client):
     )
 
     response = client.get(
-        f"/seller-applications/{application['id']}",
+        f"{API_PREFIX}/seller-applications/{application['id']}",
         headers=other_headers,
     )
 
@@ -133,7 +135,7 @@ def test_customer_mine_endpoint_returns_only_the_current_users_application(
     )
 
     response = client.get(
-        "/seller-applications/mine",
+        f"{API_PREFIX}/seller-applications/mine",
         headers=other_headers,
     )
 
@@ -173,7 +175,7 @@ def test_admin_can_list_applications_with_each_status_filter(
     ]
     for application_id, payload in review_cases:
         response = client.patch(
-            f"/seller-applications/{application_id}/review",
+            f"{API_PREFIX}/seller-applications/{application_id}/review",
             headers=admin_headers,
             json=payload,
         )
@@ -186,7 +188,7 @@ def test_admin_can_list_applications_with_each_status_filter(
         "needs_more_info": needs_info["id"],
     }
     all_response = client.get(
-        "/seller-applications",
+        f"{API_PREFIX}/seller-applications",
         headers=admin_headers,
     )
     assert all_response.status_code == 200
@@ -194,7 +196,7 @@ def test_admin_can_list_applications_with_each_status_filter(
 
     for status_value, application_id in expected.items():
         response = client.get(
-            "/seller-applications",
+            f"{API_PREFIX}/seller-applications",
             params={"status": status_value},
             headers=admin_headers,
         )
@@ -206,7 +208,7 @@ def test_invalid_application_status_filter_is_rejected(client, db_session):
     admin_headers, _ = make_admin(client, db_session)
 
     response = client.get(
-        "/seller-applications",
+        f"{API_PREFIX}/seller-applications",
         params={"status": "unknown"},
         headers=admin_headers,
     )
@@ -223,11 +225,11 @@ def test_admin_can_get_application_and_missing_application_is_404(
     )
 
     response = client.get(
-        f"/seller-applications/{application['id']}",
+        f"{API_PREFIX}/seller-applications/{application['id']}",
         headers=admin_headers,
     )
     missing_response = client.get(
-        "/seller-applications/999999",
+        f"{API_PREFIX}/seller-applications/999999",
         headers=admin_headers,
     )
 
@@ -246,7 +248,7 @@ def test_admin_can_reject_application_with_notes_and_records_review(
     )
 
     response = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=admin_headers,
         json={
             "status": "rejected",
@@ -271,7 +273,7 @@ def test_admin_can_request_more_information_with_notes(
     )
 
     response = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=admin_headers,
         json={
             "status": "needs_more_info",
@@ -309,7 +311,7 @@ def test_invalid_review_payload_is_rejected(client, db_session, payload):
     )
 
     response = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=admin_headers,
         json=payload,
     )
@@ -323,7 +325,7 @@ def test_customer_cannot_review_application(client, db_session):
     )
 
     response = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=customer_headers,
         json={"status": "approved"},
     )
@@ -340,7 +342,7 @@ def test_approved_review_promotes_applicant_to_seller(
     )
 
     response = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=admin_headers,
         json={"status": "approved"},
     )
@@ -368,12 +370,12 @@ def test_finalized_application_cannot_be_reviewed_again(
     if final_status == "rejected":
         first_payload["review_notes"] = "Application is incomplete."
     first = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=admin_headers,
         json=first_payload,
     )
     second = client.patch(
-        f"/seller-applications/{application['id']}/review",
+        f"{API_PREFIX}/seller-applications/{application['id']}/review",
         headers=admin_headers,
         json={"status": "approved"},
     )
@@ -424,7 +426,7 @@ def test_approval_promotes_customer_to_seller(client, db_session):
 
     # The admin approves the application.
     review_response = client.patch(
-        f"/seller-applications/{application_id}/review",
+        f"{API_PREFIX}/seller-applications/{application_id}/review",
         headers=admin_headers,
         json={"status": "approved"},
     )

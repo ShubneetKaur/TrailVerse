@@ -1,3 +1,5 @@
+API_PREFIX = "/api/v1"
+
 import pytest
 from datetime import timedelta
 
@@ -7,7 +9,7 @@ from app.models.user import User
 
 def test_register_user_returns_customer(client):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Test Customer",
             "email": "customer@example.com",
@@ -26,7 +28,7 @@ def test_register_user_returns_customer(client):
 
 def test_register_cannot_assign_admin_role(client):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Test Customer",
             "email": "role-test@example.com",
@@ -46,8 +48,8 @@ def test_duplicate_registration_returns_conflict(client):
         "password": "password123",
     }
 
-    first_response = client.post("/auth/register", json=payload)
-    second_response = client.post("/auth/register", json=payload)
+    first_response = client.post(f"{API_PREFIX}/auth/register", json=payload)
+    second_response = client.post(f"{API_PREFIX}/auth/register", json=payload)
 
     assert first_response.status_code == 201
     assert second_response.status_code == 409
@@ -55,7 +57,7 @@ def test_duplicate_registration_returns_conflict(client):
 
 def test_register_rejects_short_password(client):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Test Customer",
             "email": "short-password@example.com",
@@ -68,7 +70,7 @@ def test_register_rejects_short_password(client):
 
 def test_login_returns_access_token(client):
     client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Login Customer",
             "email": "login@example.com",
@@ -77,7 +79,7 @@ def test_login_returns_access_token(client):
     )
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={
             "email": "login@example.com",
             "password": "password123",
@@ -93,7 +95,7 @@ def test_login_returns_access_token(client):
 
 def test_login_rejects_wrong_password(client):
     client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Login Customer",
             "email": "wrong-password@example.com",
@@ -102,7 +104,7 @@ def test_login_rejects_wrong_password(client):
     )
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={
             "email": "wrong-password@example.com",
             "password": "wrongpassword",
@@ -114,7 +116,7 @@ def test_login_rejects_wrong_password(client):
 
 def test_login_rejects_inactive_user(client, db_session):
     client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Inactive User",
             "email": "inactive@example.com",
@@ -129,7 +131,7 @@ def test_login_rejects_inactive_user(client, db_session):
     db_session.commit()
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={
             "email": "inactive@example.com",
             "password": "password123",
@@ -143,7 +145,7 @@ def test_auth_me_rejects_expired_token(client):
     token = create_access_token("999", timedelta(seconds=-1))
 
     response = client.get(
-        "/auth/me",
+        f"{API_PREFIX}/auth/me",
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -152,7 +154,7 @@ def test_auth_me_rejects_expired_token(client):
 
 def test_auth_me_returns_authenticated_user(client):
     client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": "Current Customer",
             "email": "current@example.com",
@@ -161,7 +163,7 @@ def test_auth_me_returns_authenticated_user(client):
     )
 
     login_response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={
             "email": "current@example.com",
             "password": "password123",
@@ -170,7 +172,7 @@ def test_auth_me_returns_authenticated_user(client):
 
     token = login_response.json()["access_token"]
     response = client.get(
-        "/auth/me",
+        f"{API_PREFIX}/auth/me",
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -187,6 +189,6 @@ def test_auth_me_returns_authenticated_user(client):
     ],
 )
 def test_auth_me_rejects_missing_or_invalid_token(client, headers):
-    response = client.get("/auth/me", headers=headers)
+    response = client.get(f"{API_PREFIX}/auth/me", headers=headers)
 
     assert response.status_code == 401

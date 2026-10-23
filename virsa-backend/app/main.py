@@ -10,6 +10,8 @@ from app.api.routes.seller_applications import (
 )
 from app.api.routes.sellers import router as sellers_router
 from app.api.routes.artworks import router as artworks_router
+from app.api.routes.cart import router as cart_router
+from app.api.routes.orders import router as orders_router
 
 app = FastAPI(
     title="VIRSA API",
@@ -36,6 +38,8 @@ app.include_router(seller_applications_router, prefix=API_PREFIX)
 app.include_router(sellers_router, prefix=API_PREFIX)
 app.include_router(artworks_router, prefix=API_PREFIX)
 app.include_router(uploads.router, prefix=API_PREFIX)
+app.include_router(cart_router, prefix=API_PREFIX)
+app.include_router(orders_router, prefix=API_PREFIX)
 
 
 @app.get("/")

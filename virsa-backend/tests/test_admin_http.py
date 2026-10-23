@@ -1,3 +1,5 @@
+API_PREFIX = "/api/v1"
+
 from app.models.artwork import Artwork
 from app.models.seller_application import SellerApplication
 from app.models.user import User
@@ -5,13 +7,13 @@ from app.models.user import User
 
 def register_and_login(client, name, email, password):
     register_response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={"name": name, "email": email, "password": password},
     )
     assert register_response.status_code == 201
 
     login_response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert login_response.status_code == 200
@@ -29,7 +31,7 @@ def test_admin_dashboard_requires_admin_role(client):
     )
 
     response = client.get(
-        "/admin/dashboard/stats",
+        f"{API_PREFIX}/admin/dashboard/stats",
         headers=customer_headers,
     )
 
@@ -106,7 +108,7 @@ def test_admin_dashboard_returns_database_counts(client, db_session):
     db_session.commit()
 
     response = client.get(
-        "/admin/dashboard/stats",
+        f"{API_PREFIX}/admin/dashboard/stats",
         headers=admin_headers,
     )
 

@@ -1,3 +1,5 @@
+API_PREFIX = "/api/v1"
+
 import pytest
 
 from app.models.user import User
@@ -7,7 +9,7 @@ from app.models.artwork import Artwork
 
 def register_and_login(client, name, email, password="password123"):
     response = client.post(
-        "/auth/register",
+        f"{API_PREFIX}/auth/register",
         json={
             "name": name,
             "email": email,
@@ -17,7 +19,7 @@ def register_and_login(client, name, email, password="password123"):
     assert response.status_code == 201
 
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert response.status_code == 200
@@ -63,7 +65,7 @@ def artwork_payload(**overrides):
 
 def create_artwork(client, headers, **overrides):
     return client.post(
-        "/artworks",
+        f"{API_PREFIX}/artworks",
         headers=headers,
         json=artwork_payload(**overrides),
     )
@@ -125,7 +127,7 @@ def test_approved_application_without_seller_role_cannot_create_artwork(
 
 
 def test_unauthenticated_user_cannot_create_artwork(client):
-    response = client.post("/artworks", json=artwork_payload())
+    response = client.post(f"{API_PREFIX}/artworks", json=artwork_payload())
 
     assert response.status_code == 401
 
@@ -141,7 +143,7 @@ def test_seller_can_edit_own_artwork(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=headers,
         json={"title": "Updated Shawl", "price": "1799.00"},
     )
@@ -166,7 +168,7 @@ def test_seller_cannot_edit_another_sellers_artwork(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=other_headers,
         json={"title": "Stolen Edit"},
     )
@@ -185,7 +187,7 @@ def test_seller_can_publish_own_draft(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=headers,
     )
 
@@ -217,14 +219,14 @@ def test_seller_mine_and_stats_include_only_own_artworks(
     assert other_artwork.status_code == 201
 
     publish_response = client.patch(
-        f"/artworks/{owner_published.json()['id']}/publish",
+        f"{API_PREFIX}/artworks/{owner_published.json()['id']}/publish",
         headers=owner_headers,
     )
     assert publish_response.status_code == 200
 
-    mine_response = client.get("/artworks/mine", headers=owner_headers)
+    mine_response = client.get(f"{API_PREFIX}/artworks/mine", headers=owner_headers)
     stats_response = client.get(
-        "/artworks/mine/stats",
+        f"{API_PREFIX}/artworks/mine/stats",
         headers=owner_headers,
     )
 
@@ -263,20 +265,20 @@ def test_public_catalog_hides_drafts_and_shows_published(
     published_id = published.json()["id"]
 
     publish_response = client.patch(
-        f"/artworks/{published_id}/publish",
+        f"{API_PREFIX}/artworks/{published_id}/publish",
         headers=headers,
     )
     assert publish_response.status_code == 200
 
-    catalog = client.get("/artworks")
+    catalog = client.get(f"{API_PREFIX}/artworks")
     assert catalog.status_code == 200
 
     titles = [item["title"] for item in catalog.json()["items"]]
     assert "Public Shawl" in titles
     assert "Private Draft" not in titles
 
-    hidden_detail = client.get(f"/artworks/{draft_id}")
-    visible_detail = client.get(f"/artworks/{published_id}")
+    hidden_detail = client.get(f"{API_PREFIX}/artworks/{draft_id}")
+    visible_detail = client.get(f"{API_PREFIX}/artworks/{published_id}")
 
     assert hidden_detail.status_code == 404
     assert visible_detail.status_code == 200
@@ -299,7 +301,7 @@ def test_seller_cannot_publish_another_sellers_artwork(
     artwork_id = created.json()["id"]
 
     response = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=other_headers,
     )
 
@@ -317,7 +319,7 @@ def test_seller_can_delete_own_artwork(client, db_session):
     artwork_id = created.json()["id"]
 
     response = client.delete(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=headers,
     )
 
@@ -342,7 +344,7 @@ def test_seller_cannot_delete_another_sellers_artwork(
     artwork_id = created.json()["id"]
 
     response = client.delete(
-        f"/artworks/{artwork_id}",
+        f"{API_PREFIX}/artworks/{artwork_id}",
         headers=other_headers,
     )
 
@@ -363,11 +365,11 @@ def test_seller_cannot_publish_same_artwork_twice(
     artwork_id = created.json()["id"]
 
     first = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=headers,
     )
     second = client.patch(
-        f"/artworks/{artwork_id}/publish",
+        f"{API_PREFIX}/artworks/{artwork_id}/publish",
         headers=headers,
     )
 

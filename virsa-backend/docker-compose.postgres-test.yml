@@ -1,0 +1,14 @@
+services:
+  postgres-test:
+    image: postgres:16
+    ports:
+      - "55432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-trailverse_test}
+      POSTGRES_USER: ${POSTGRES_TEST_USER:-trailverse_test}
+      POSTGRES_PASSWORD: ${POSTGRES_TEST_PASSWORD:?Set POSTGRES_TEST_PASSWORD to a local-only value}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

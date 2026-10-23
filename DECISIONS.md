@@ -27,6 +27,7 @@
 - [ADR-016: Seller Verification Applications](#adr-016-seller-verification-applications)
 - [ADR-017: Seller Role Promotion on Approval](#adr-017-seller-role-promotion-on-approval)
 - [ADR-018: Explicit Vite Development CORS Origin](#adr-018-explicit-vite-development-cors-origin)
+- [ADR-019: Persistent Customer Carts and Explicit Artwork Stock](#adr-019-persistent-customer-carts-and-explicit-artwork-stock)
 
 ---
 
@@ -80,6 +81,7 @@ What choice was made? What technologies, patterns, or architecture were adopted?
 | **ADR-016** | Seller Verification Applications | `Implemented` | Seller Verification & Database |
 | **ADR-017** | Seller Role Promotion on Approval | `Implemented` | Seller Verification & Authorization |
 | **ADR-018** | Explicit Vite Development CORS Origin | `Implemented` | API & Security |
+| **ADR-019** | Persistent Customer Carts and Explicit Artwork Stock | `Implemented` | Marketplace / Database |
 
 ---
 
@@ -480,6 +482,46 @@ Configure FastAPI's `CORSMiddleware` to allow only `http://localhost:5173`, the 
 - **Benefits:** Enables the local Vite frontend to call the API while restricting browser access to a single known development origin and the API's required methods and headers.
 - **Trade-offs / Risks:** Other frontend origins, including alternate hostnames or ports and production origins, must be explicitly configured when introduced.
 - **Alternatives Considered:** Allowing every origin was rejected because it is unnecessarily broad; configuring production origins is deferred until a production frontend origin is known.
+
+---
+
+## ADR-019: Persistent Customer Carts and Explicit Artwork Stock
+
+- **Date:** 2026-10-23
+- **Status:** `Implemented`
+- **Components:** Marketplace / Database / API
+
+### Context
+The marketplace needs a persistent cart before checkout can be implemented. Existing artworks had prices and publication status but no inventory quantity, so checkout could not later prevent overselling.
+
+### Decision
+Add one persistent cart per customer and cart items with a database uniqueness constraint on `(cart_id, artwork_id)`. Cart totals are calculated from the current database artwork price; clients cannot provide prices or totals. Add nullable `stock_quantity` to artworks: legacy rows with `NULL` inventory are not available to carts, while new or updated rows may specify a non-negative integer quantity. Cart additions and quantity updates require a published artwork with positive stock.
+
+### Consequences & Rationale
+- **Benefits:** Cart ownership and duplicate lines are enforced at both the API and database layers, and checkout has an explicit stock value to validate and decrement later.
+- **Trade-offs / Risks:** Existing artworks require an explicit stock update before they can be purchased. Checkout must still implement an atomic decrement and reservation policy.
+- **Alternatives Considered:** Backfilling existing artwork quantities was rejected because it would invent inventory values and silently change existing availability.
+
+---
+
+### ADR-020: Atomic Customer Orders and Inventory Checkout
+
+- **Date:** 2026-10-23
+- **Status:** `Implemented`
+- **Components:** Orders, Marketplace, Database, API
+
+#### Context
+Phase 1 carts do not reserve stock. Checkout therefore needs to create one order from the authenticated customer's entire cart while preventing overselling and preserving historical prices.
+
+#### Decision
+Add customer-owned `orders` and immutable `order_items`. Checkout uses the current listed artwork price as both `listed_unit_price` and, absent a future server-authorized negotiation agreement, `agreed_unit_price`. It decrements each artwork through a conditional stock update in deterministic artwork-ID order, creates all order snapshots, clears the cart, and commits only after every item succeeds. Any failure rolls back the complete transaction.
+
+Orders use `pending` and `cancelled` statuses, store `INR`, and may be cancelled only while pending. Cancellation uses a conditional status transition and restores each item's stock in the same transaction, so repeated cancellation cannot restore inventory twice. Customer and artwork foreign keys restrict deletion to preserve order history.
+
+#### Consequences & Rationale
+- **Benefits:** Prevents overselling at the database write boundary, preserves listed/agreed price history, and keeps cancellation inventory restoration atomic.
+- **Trade-offs / Risks:** Payment, expiry, refunds, shipping, negotiation, and PostgreSQL concurrency validation remain outside this phase. Pending orders consume stock until cancellation.
+- **Alternatives Considered:** Relying only on pre-checkout reads or `SELECT ... FOR UPDATE` was rejected because carts are not reservations and SQLite does not provide row-level locking.
 
 ---
 
