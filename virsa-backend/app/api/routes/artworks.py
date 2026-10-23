@@ -233,6 +233,54 @@ def list_artworks(
         offset=offset,
     )
 
+@router.get("/mine", response_model=ArtworkListResponse)
+def list_my_artworks(
+    current_user: Annotated[User, Depends(require_approved_seller)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ArtworkListResponse:
+    query = db.query(Artwork).filter(
+        Artwork.seller_id == current_user.id
+    )
+
+    total = query.count()
+
+    items = (
+        query.order_by(Artwork.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return ArtworkListResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+@router.get("/mine/stats")
+def get_my_artwork_stats(
+    current_user: Annotated[User, Depends(require_approved_seller)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, int]:
+    artworks = (
+        db.query(Artwork)
+        .filter(Artwork.seller_id == current_user.id)
+        .all()
+    )
+
+    return {
+        "total": len(artworks),
+        "draft": sum(1 for artwork in artworks if artwork.status == "draft"),
+        "published": sum(
+            1 for artwork in artworks if artwork.status == "published"
+        ),
+        "archived": sum(
+            1 for artwork in artworks if artwork.status == "archived"
+        ),
+    }
+
 @router.get(
     "/{artwork_id}",
     response_model=ArtworkResponse,
